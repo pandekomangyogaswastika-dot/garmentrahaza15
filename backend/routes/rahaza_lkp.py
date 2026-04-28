@@ -554,6 +554,71 @@ async def list_all_lkp(
     return serialize_doc(rows)
 
 
+@router.get("/lkp-bulk-today")
+async def get_bulk_lkp_today(request: Request):
+    """
+    Mendapatkan semua WO yang statusnya 'released' atau 'in_progress' hari ini
+    beserta status LKP mereka (ada / belum ada / jumlah versi).
+    Digunakan untuk fitur Cetak LKP Massal.
+    """
+    await require_auth(request)
+    db = get_db()
+
+    # Ambil semua WO aktif (released + in_progress)
+    wos = await db.rahaza_work_orders.find(
+        {"status": {"$in": ["released", "in_progress"]}},
+        {"_id": 0}
+    ).sort("wo_number", 1).to_list(None)
+
+    if not wos:
+        return {"work_orders": [], "total": 0, "total_with_lkp": 0, "total_without_lkp": 0}
+
+    wo_ids = [w["id"] for w in wos]
+
+    # Ambil semua LKP aktif untuk WO tersebut
+    lkps = await db.rahaza_lkp.find(
+        {"work_order_id": {"$in": wo_ids}, "status": {"$ne": "revoked"}},
+        {"_id": 0, "work_order_id": 1, "id": 1, "lkp_number": 1, "version": 1,
+         "created_at": 1, "status": 1}
+    ).to_list(None)
+
+    # Group by WO
+    lkp_map = {}
+    for lkp in lkps:
+        wid = lkp["work_order_id"]
+        if wid not in lkp_map:
+            lkp_map[wid] = []
+        lkp_map[wid].append(lkp)
+
+    # Build response
+    result = []
+    for wo in wos:
+        wid = wo["id"]
+        wo_lkps = lkp_map.get(wid, [])
+        latest = sorted(wo_lkps, key=lambda x: x.get("version", 0), reverse=True)
+        result.append({
+            "wo_id": wid,
+            "wo_number": wo.get("wo_number"),
+            "model_code": wo.get("model_code"),
+            "status": wo.get("status"),
+            "qty": wo.get("qty"),
+            "line_code": wo.get("line_code"),
+            "has_lkp": len(wo_lkps) > 0,
+            "lkp_count": len(wo_lkps),
+            "latest_lkp_id": latest[0]["id"] if latest else None,
+            "latest_lkp_number": latest[0]["lkp_number"] if latest else None,
+            "latest_version": latest[0]["version"] if latest else None,
+        })
+
+    total_with_lkp = sum(1 for r in result if r["has_lkp"])
+    return {
+        "work_orders": result,
+        "total": len(result),
+        "total_with_lkp": total_with_lkp,
+        "total_without_lkp": len(result) - total_with_lkp,
+    }
+
+
 @router.delete("/lkp/{lkp_id}")
 async def delete_lkp(lkp_id: str, request: Request):
     """Soft-delete an LKP version (mark as revoked)."""

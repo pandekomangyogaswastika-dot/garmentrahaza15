@@ -125,8 +125,13 @@ const PurchaseOrderModule = lazy(() => import('./PurchaseOrderModule'));
 // Sprint 2.3 — Leave Management
 const RahazaLeaveModule = lazy(() => import('./RahazaLeaveModule'));
 // Sprint 3.1 — HR Reports
-const RahazaBulkMIModule      = lazy(() => import('./RahazaBulkMIModule'));
+const RahazaBulkMIModule        = lazy(() => import('./RahazaBulkMIModule'));
 const RahazaLineBalancingModule = lazy(() => import('./RahazaLineBalancingModule'));
+
+// Phase 22B — Shift Handover, Material Reservation, Production Calendar
+const RahazaShiftHandoverModule      = lazy(() => import('./RahazaShiftHandoverModule'));
+const RahazaMaterialReservationModule = lazy(() => import('./RahazaMaterialReservationModule'));
+const RahazaProductionCalendarModule  = lazy(() => import('./RahazaProductionCalendarModule'));
 
 // Module map — id → component. IDs MUST be unique.
 export const MODULE_REGISTRY = {
@@ -289,6 +294,12 @@ export const MODULE_REGISTRY = {
 
   // Staff Self-Service Portal
   'self-dashboard':        SelfServicePortal,
+
+  // Phase 22B — Shift Handover, Material Reservation, Production Calendar
+  'prod-shift-handover':       RahazaShiftHandoverModule,
+  'prod-material-reservation': RahazaMaterialReservationModule,
+  'prod-production-calendar':  RahazaProductionCalendarModule,
+  'wh-material-reservation':   RahazaMaterialReservationModule,
 };
 
 export const DEFAULT_MODULE = ManagementDashboard;

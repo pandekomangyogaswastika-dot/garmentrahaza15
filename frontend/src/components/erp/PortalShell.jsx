@@ -13,12 +13,13 @@ import {
   // Production operational
   LayoutGrid, CalendarClock, ClipboardList, ClipboardSignature, Boxes,
   Hammer, UserCheck, Activity, BarChart4, Siren, AlertTriangle, Truck, Tv2, Zap,
+  ClipboardPen, Package, CalendarDays,
   // Production process stages
   Cable, Link2, Scissors, ClipboardCheck, Droplets, PackageOpen, Waves, Paintbrush,
   // Production master
   Map, Workflow, Timer, Wrench, Factory, HardHat, Ruler, ListTree, BookMarked,
   // Warehouse
-  Archive, PackageMinus, PackagePlus, ArrowRightLeft, MapPin, Sparkles,
+  Archive, PackageMinus, PackagePlus, ArrowRightLeft, MapPin, Sparkles, Lock,
   // Finance — Accounting Core
   FolderTree, BookCheck, Scale, Book, CalendarRange, Settings2,
   FileText, Hourglass, Wallet,
@@ -97,12 +98,14 @@ const PORTAL_NAV = {
       {
         label: 'EKSEKUSI',
         items: [
-          { id: 'prod-orders',       label: 'Order Produksi',       icon: ClipboardList },
-          { id: 'prod-work-orders',  label: 'Work Order',           icon: ClipboardSignature },
-          { id: 'prod-bundles',      label: 'Penelusuran Bundle',   icon: Boxes },
-          { id: 'prod-rework-board', label: 'Papan Rework',         icon: Hammer },
-          { id: 'prod-assignments',  label: 'Assign Lini Hari Ini', icon: UserCheck },
-          { id: 'prod-bulk-mi',      label: 'Bulk Material Issue',  icon: Zap },
+          { id: 'prod-orders',              label: 'Order Produksi',        icon: ClipboardList },
+          { id: 'prod-work-orders',         label: 'Work Order',            icon: ClipboardSignature },
+          { id: 'prod-bundles',             label: 'Penelusuran Bundle',    icon: Boxes },
+          { id: 'prod-rework-board',        label: 'Papan Rework',          icon: Hammer },
+          { id: 'prod-assignments',         label: 'Assign Lini Hari Ini',  icon: UserCheck },
+          { id: 'prod-bulk-mi',             label: 'Bulk Material Issue',   icon: Zap },
+          { id: 'prod-shift-handover',      label: 'Shift Handover',        icon: ClipboardPen },
+          { id: 'prod-material-reservation',label: 'Reservasi Material',    icon: Package },
         ]
       },
       {
@@ -154,6 +157,7 @@ const PORTAL_NAV = {
           { id: 'prod-bom',       label: 'BOM Produk',          icon: ListTree },
           { id: 'prod-sop',       label: 'SOP Produksi',        icon: BookMarked },
           { id: 'prod-defect-codes', label: 'Master Kode Cacat', icon: ShieldAlert },
+          { id: 'prod-production-calendar', label: 'Kalender Produksi', icon: CalendarDays },
         ]
       },
       {
@@ -200,6 +204,7 @@ const PORTAL_NAV = {
           { id: 'wh-opname',    label: 'Stok Opname',       icon: ClipboardCheck },
           { id: 'wh-bin',       label: 'Lokasi / Bin',      icon: MapPin },
           { id: 'wh-accessory', label: 'Aksesoris',         icon: Sparkles },
+          { id: 'wh-material-reservation', label: 'Reservasi Material', icon: Lock },
         ]
       },
     ]

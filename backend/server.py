@@ -544,6 +544,12 @@ from routes.rahaza_hr_reports import router as rahaza_hr_reports_router
 app.include_router(rahaza_hr_reports_router)
 # Sprint 22 — Supervisor Power Tools
 app.include_router(rahaza_sprint22_router)
+# Production Calendar (Phase 22B)
+from routes.rahaza_production_calendar import router as rahaza_production_calendar_router
+app.include_router(rahaza_production_calendar_router)
+# Demo Seed
+from routes.rahaza_demo_seed import router as rahaza_demo_seed_router
+app.include_router(rahaza_demo_seed_router)
 
 # ─── CORS MIDDLEWARE ────────────────────────────────────────────────────────
 app.add_middleware(

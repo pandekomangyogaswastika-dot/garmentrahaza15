@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Eye, ArrowRight, X, ClipboardList, Scale, AlertTriangle, CheckCircle2, Box, Printer, FileText, Download, RefreshCw, History } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, ArrowRight, X, ClipboardList, Scale, AlertTriangle, CheckCircle2, Box, Printer, FileText, Download, RefreshCw, History, PrinterCheck } from 'lucide-react';
 import { GlassCard, GlassPanel, GlassInput } from '@/components/ui/glass';
 import { Button } from '@/components/ui/button';
 import Modal from './Modal';
@@ -66,6 +66,10 @@ export default function RahazaWorkOrdersModule({ token, onNavigate }) {
   const [lkpList, setLkpList] = useState([]);
   const [lkpAuditOpen, setLkpAuditOpen] = useState(null); // lkp object
   const [lkpLoading, setLkpLoading] = useState(false);
+  // LKP Bulk Print state
+  const [bulkLkpOpen, setBulkLkpOpen] = useState(false);
+  const [bulkLkpData, setBulkLkpData] = useState(null);
+  const [bulkLkpLoading, setBulkLkpLoading] = useState(false);
 
   // M12: Memoize headers to prevent unnecessary re-renders / effect cycles
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
@@ -89,6 +93,17 @@ export default function RahazaWorkOrdersModule({ token, onNavigate }) {
       fetch('/api/rahaza/orders', { headers: h }).then(r => r.ok ? r.json() : []),
     ]).then(([st, m, s, o]) => { setStatuses(st); setModels(m); setSizes(s); setOrders(o); });
   }, [token]);
+
+  const openBulkLkp = async () => {
+    setBulkLkpLoading(true);
+    setBulkLkpOpen(true);
+    try {
+      const res = await fetch('/api/rahaza/lkp-bulk-today', { headers });
+      if (res.ok) setBulkLkpData(await res.json());
+    } finally {
+      setBulkLkpLoading(false);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -259,7 +274,14 @@ export default function RahazaWorkOrdersModule({ token, onNavigate }) {
         eyebrow="Portal Produksi"
         title="Work Order (WO)"
         subtitle="Perintah produksi per item. Bisa digenerate otomatis dari Order, atau dibuat manual untuk stok internal."
-        actions={<Button onClick={openCreate} data-testid="wo-add-btn"><Plus className="w-4 h-4 mr-1.5" /> WO Manual</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openBulkLkp} data-testid="bulk-lkp-btn" className="flex items-center gap-1.5">
+              <PrinterCheck className="w-4 h-4" /> Cetak LKP Massal
+            </Button>
+            <Button onClick={openCreate} data-testid="wo-add-btn"><Plus className="w-4 h-4 mr-1.5" /> WO Manual</Button>
+          </div>
+        }
       />
 
       <DataTable
@@ -736,6 +758,104 @@ export default function RahazaWorkOrdersModule({ token, onNavigate }) {
                   {bundleGenModal.loading ? 'Memproses...' : (bundleGenModal.force ? 'Regenerate Bundles' : 'Generate Bundles')}
                 </Button>
               </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk LKP Print Modal */}
+      {bulkLkpOpen && (
+        <Modal onClose={() => setBulkLkpOpen(false)} title="Cetak LKP Massal">
+          <div className="space-y-4 min-w-[520px] max-w-2xl" data-testid="bulk-lkp-modal">
+            {bulkLkpLoading ? (
+              <div className="text-center py-8 text-foreground/50">Memuat data WO aktif...</div>
+            ) : !bulkLkpData ? (
+              <div className="text-center py-8 text-foreground/50">Gagal memuat data</div>
+            ) : (
+              <>
+                {/* Summary */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Total WO Aktif', val: bulkLkpData.total, color: 'text-foreground' },
+                    { label: 'Sudah Ada LKP', val: bulkLkpData.total_with_lkp, color: 'text-emerald-400' },
+                    { label: 'Belum Ada LKP', val: bulkLkpData.total_without_lkp, color: 'text-amber-400' },
+                  ].map(c => (
+                    <div key={c.label} className="p-3 rounded-xl border border-[var(--glass-border)] bg-[var(--card-surface)] text-center">
+                      <p className={`text-2xl font-bold ${c.color}`}>{c.val}</p>
+                      <p className="text-xs text-foreground/50 mt-0.5">{c.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* WO Table */}
+                <div className="max-h-80 overflow-y-auto rounded-xl border border-[var(--glass-border)]">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-[var(--card-surface)]">
+                      <tr>
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-foreground/50">WO</th>
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-foreground/50">Model</th>
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-foreground/50">Line</th>
+                        <th className="text-right px-3 py-2 text-xs font-semibold text-foreground/50">Qty</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-foreground/50">LKP</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-foreground/50">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bulkLkpData.work_orders.map((wo, i) => (
+                        <tr key={wo.wo_id} className={`border-t border-[var(--glass-border)] ${i % 2 === 0 ? '' : 'bg-foreground/[0.02]'}`} data-testid={`bulk-lkp-row-${wo.wo_id}`}>
+                          <td className="px-3 py-2 font-mono text-xs">{wo.wo_number}</td>
+                          <td className="px-3 py-2 text-xs">{wo.model_code}</td>
+                          <td className="px-3 py-2 text-xs">{wo.line_code}</td>
+                          <td className="px-3 py-2 text-xs text-right">{wo.qty}</td>
+                          <td className="px-3 py-2 text-center">
+                            {wo.has_lkp
+                              ? <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300">v{wo.latest_version}</span>
+                              : <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300">Belum</span>}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {wo.has_lkp && wo.latest_lkp_id ? (
+                              <a
+                                href={`/api/rahaza/lkp/${wo.latest_lkp_id}/pdf?auth=${token}`}
+                                target="_blank" rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.25)] border border-[hsl(var(--primary)/0.2)] transition-colors"
+                                data-testid={`print-lkp-${wo.wo_id}`}
+                              >
+                                <Printer className="w-3 h-3" /> Cetak
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() => { setBulkLkpOpen(false); setLkpDialog(bulkLkpData.work_orders.find(w => w.wo_id === wo.wo_id)); }}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-foreground/5 text-foreground/50 hover:bg-foreground/10 border border-[var(--glass-border)] transition-colors"
+                                data-testid={`create-lkp-${wo.wo_id}`}
+                              >
+                                <Plus className="w-3 h-3" /> Buat LKP
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Bulk Print All with LKP */}
+                {bulkLkpData.total_with_lkp > 0 && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                    <PrinterCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <p className="text-xs text-foreground/70 flex-1">
+                      {bulkLkpData.total_with_lkp} WO sudah punya LKP — klik setiap tombol "Cetak" di atas, atau buka PDF masing-masing secara terpisah.
+                    </p>
+                  </div>
+                )}
+                {bulkLkpData.total_without_lkp > 0 && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <p className="text-xs text-foreground/70">
+                      {bulkLkpData.total_without_lkp} WO belum punya LKP. Klik "Buat LKP" pada baris yang belum ada.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </Modal>
