@@ -262,3 +262,47 @@ async def get_wo_reservations(wo_id: str, request: Request):
             r["unit"] = mat_info.get("unit")
     
     return reservations
+
+
+# ─── ADMIN: LIST ALL RESERVATIONS ──────────────────────────────────────────
+@router.get("/material-reservations")
+async def list_all_reservations(
+    request: Request,
+    status: Optional[str] = Query(None, description="active | released | cancelled"),
+    limit: int = Query(100, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+):
+    """Admin view: list all material reservations with material and WO info."""
+    await require_auth(request)
+    db = get_db()
+
+    q = {}
+    if status:
+        q["status"] = status
+
+    reservations = await db.rahaza_material_reservations.find(q, {"_id": 0}).sort(
+        "created_at", -1
+    ).skip(skip).limit(limit).to_list(None)
+
+    total = await db.rahaza_material_reservations.count_documents(q)
+
+    if reservations:
+        mat_ids = list(set(r["material_id"] for r in reservations))
+        wo_ids = list(set(r["wo_id"] for r in reservations))
+        mats = await db.rahaza_materials.find(
+            {"id": {"$in": mat_ids}}, {"_id": 0, "id": 1, "code": 1, "name": 1, "unit": 1}
+        ).to_list(None)
+        wos = await db.rahaza_work_orders.find(
+            {"id": {"$in": wo_ids}}, {"_id": 0, "id": 1, "wo_number": 1}
+        ).to_list(None)
+        mat_map = {m["id"]: m for m in mats}
+        wo_map = {w["id"]: w for w in wos}
+        for r in reservations:
+            m = mat_map.get(r["material_id"], {})
+            r["material_code"] = m.get("code")
+            r["material_name"] = m.get("name")
+            r["unit"] = m.get("unit")
+            w = wo_map.get(r["wo_id"], {})
+            r["wo_number"] = w.get("wo_number")
+
+    return {"reservations": reservations, "total": total, "limit": limit, "skip": skip}
