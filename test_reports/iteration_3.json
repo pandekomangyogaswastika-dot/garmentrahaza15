@@ -1,0 +1,56 @@
+{
+  "summary": "Sprint 23 full testing: health/docs, pagination, APS Gantt Line Balance integration, SOP SAM fields, Bulk MI with BOM fix (materials field), rate limiting. 8/10 backend tests pass (1 skip, 1 fail). All frontend flows working correctly.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/auth/login (rate limit)",
+        "issue": "Rate limiting returns 401 (not 429) for 12 rapid requests. Rate limit is in-memory and uses client_ip from request.client.host. In Kubernetes/proxy environment, all requests share the same proxy IP but rate limit NOT triggering. Either: (a) requests come too slowly (~3 req/sec spread across 4s), (b) different key per worker process, or (c) proxy strips client IP. The _rl_store is in-memory and per-process. In the test, 12 requests were sent within ~4 seconds at rate ~3/s — all returned 401, no 429 observed.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "PUT /api/rahaza/sop/{id} (SOP SAM update test skipped)",
+        "issue": "Test skipped because no SOPs exist in DB (test_get_sops_list returned 0 SOPs). SOP module works correctly in UI (form shows SAM and target_pcs fields). Backend PUT endpoint correctly handles sam_minutes field. Issue is just missing seed data for testing."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Bulk MI - default status filter",
+        "issue": "UI defaults to 'Status: Released' filter, showing 0 WOs. All active WOs have status 'in_progress'. Users must manually change filter to 'In Progress'. Consider changing default filter to show all statuses or include in_progress.",
+        "affected_selectors": ["select[filterStatus]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sprint23.py",
+    "/app/test_reports/pytest/sprint23_results.xml"
+  ],
+  "action_items": [
+    "Rate limiting: In-memory rate limit store (_rl_store) does not work reliably in proxy/multi-worker environments. Consider using Redis-based rate limiting or validate that client_ip is correctly extracted when behind reverse proxy (may need X-Forwarded-For header).",
+    "Bulk MI default status: Consider changing default filterStatus from 'released' to 'in_progress' or 'all' since most active WOs are in_progress.",
+    "SOP seed data: No SOPs exist in DB — create seed SOPs to enable full SOP SAM update testing."
+  ],
+  "critical_code_review_comments": [
+    "Rate limit uses in-memory dict (_rl_store) — not suitable for multi-worker/multi-process deployments. Should use Redis or shared cache for production reliability.",
+    "Rate limit key: key = f'{client_ip}:{path[:30]}' — client_ip from request.client.host may be proxy/ingress IP in K8s, making rate limiting per-IP ineffective.",
+    "Bulk MI UI default filter is 'released' but most real-world WOs in this system are 'in_progress' — may confuse operators who see empty list."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sprint23.py"
+  ],
+  "success_rate": {
+    "backend": "88% (8 passed, 1 skipped, 1 failed out of 10)",
+    "frontend": "100% (all Sprint 23 UI flows working)"
+  },
+  "test_credentials": "admin@garment.com / Admin@123 used for all tests",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Sprint 23 verified: (1) GET /api/health returns status:ok, db:connected, db_latency_ms ✓ (2) GET /api/docs 200 OK ✓ (3) Employees pagination limit=5 returns exactly 5 ✓ (4) APS Gantt loads correctly — Line Balance button (data-testid=aps-line-balance-btn) in header, clicking shows panel (data-testid=aps-balance-panel) with 3 lines (Line A, B, C) ✓ (5) SOP Produksi form has SAM and Target PCS fields (data-testid=sop-form-sam, sop-form-target-pcs) ✓ (6) Bulk MI with in_progress filter shows 16 WOs, select all + preview works — shows 16 Siap Generate ✓ (7) Rate limiting test FAILED — 12 rapid login requests all return 401 not 429. In-memory rate limit doesn't work reliably in proxy environment. Backend tests in /app/backend/tests/test_sprint23.py",
+  "rca_of_issue": "Rate limiting RCA: server.py line 372-391 implements in-memory rate limiting using defaultdict(list). Key is '{client_ip}:{path[:30]}'. In K8s with ingress proxy, request.client.host returns the ingress/proxy internal IP, not the real client IP. All requests share same key but the 12 test requests complete in ~4s. However, observed all 401 responses — no 429. Further investigation: the auth login route (POST /api/auth/login in auth_routes.py) may be reaching error handling before the rate limit increments, or the middleware order is off. Also possible that the proxy is load-balancing across multiple backend workers, each with their own in-memory store. Fix: implement Redis-backed rate limiting or extract real IP from X-Forwarded-For header."
+}
