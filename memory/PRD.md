@@ -1,7 +1,7 @@
 # PRD — PT Rahaza ERP (Garment Manufacturing System)
 
-**Last Updated**: 2026-04-28  
-**Version**: Sprint 24 Complete
+**Last Updated**: 2026-04-29
+**Version**: Sprint 26 Complete
 
 ---
 
@@ -15,6 +15,9 @@ Membangun sistem ERP terpadu untuk PT Rahaza Global Indonesia — pabrik garment
 - **Backend**: FastAPI (Python 3.11) + Motor async MongoDB
 - **Database**: MongoDB (local `test_database`)
 - **Auth**: JWT (HS256), bcrypt password hashing
+- **Storage**: Emergent Object Storage (via EMERGENT_LLM_KEY)
+- **PDF**: ReportLab (LKP, End-of-Shift)
+- **Async images**: aiohttp (production photos in LKP PDF)
 - **Deployment**: Supervisor-managed, port 3000 (FE) + 8001 (BE)
 
 ---
@@ -28,87 +31,79 @@ Membangun sistem ERP terpadu untuk PT Rahaza Global Indonesia — pabrik garment
 
 ---
 
-## Core Requirements (Static)
+## Core Requirements
 
 ### 5 Portals:
-1. **Manajemen**: Dashboard, Style Master, Order Management, Analytics
-2. **Produksi**: Work Orders, Bundles, APS Gantt, Line Assignments, Bulk MI, LKP, SOP, BOM, Shift Handover, Material Reservation, Production Calendar, Line Balancing, Rework Board
+1. **Manajemen**: Dashboard, Style Master, Order Management, Analytics, **Panduan Penggunaan ERP**
+2. **Produksi**: Work Orders, Bundles, APS Gantt, Line Assignments, Bulk MI, LKP, SOP, BOM, Shift Handover (+ End-of-Shift PDF), Material Reservation, Production Calendar, Line Balancing, Rework Board, OEE Dashboard
 3. **Gudang**: Materials, Inventory, Purchase Orders, Receiving, Putaway, Stockopname, Material Reservation
 4. **Keuangan**: CoA, Journal, Payroll, Finance Reports
 5. **SDM**: Employees, Attendance, HR Reports
 
 ---
 
-## What's Been Implemented (with dates)
+## What's Been Implemented
 
 ### Sprint 1 (Base Foundation)
 - Auth system (JWT + bcrypt), user management, 5-portal structure
-- Master data: Lines, Machines, Shifts, Locations, Sizes, Processes
-- Work Orders CRUD, Bundle generation/tracking
-- Material management (yarn + accessory), Inventory (FIFO)
-- Basic Dashboard, Employee management, Attendance
+- Master data, Work Orders CRUD, Bundle generation/tracking
+- Material management, Inventory (FIFO), Dashboard, Employee/Attendance
 
 ### Sprint 2 (Production Depth)
-- APS Gantt scheduler (auto-schedule, drag-reschedule)
-- BOM (Bill of Materials), SOP management
-- LKP Feature: PDF generation, versioning, audit trail, photo upload, security hardening (H1–H5)
+- APS Gantt scheduler, BOM, SOP management
+- LKP: PDF generation, versioning, audit trail, photo upload, security hardening
 - Rework Board, defect codes
-- Finance: CoA, Journal, Payroll run
+- Finance: CoA, Journal, Payroll
 - Warehouse: PO, Receiving, Put-Away, Stockopname
 
 ### Sprint 22 (Supervisor Power Tools) — 2026-04
-- Bulk MI Generator (`rahaza_sprint22.py` + `RahazaBulkMIModule.jsx`)
-- Auto-assign Template (Copy Yesterday) — integrated in `RahazaLineAssignmentsModule.jsx`
-- Line Balancing SAM-based (`RahazaLineBalancingModule.jsx`)
+- Bulk MI Generator, Auto-assign Template, Line Balancing SAM-based
 
 ### Sprint 23 — 2026-04
-- APS Gantt + Line Balance integration tab
-- SOP SAM minutes + Target PCS per operator fields
-- Health (`/api/health`), Metrics (`/api/metrics`), Docs (`/api/docs`) endpoints
+- APS Gantt + Line Balance integration, SOP SAM/Target fields
+- Health/Metrics/Docs endpoints
 
 ### Sprint 3.x (HR + Inventory Depth) — 2026-04
-- HR Reports: Attendance, Overtime, Payroll Summary, Turnover — backend `rahaza_hr_reports.py` + Excel export + frontend `RahazaHRReportsModule.jsx`
-- Accessory Module migrated to `rahaza/materials?type=accessory`
-- Payroll Attendance Validation — backend endpoint + frontend "Periksa Sekarang" button
-- Low Stock Indicators: backend `?low_stock=true` filter + frontend badge in Materials module
+- HR Reports + Excel export, Accessory module, Payroll Validation, Low Stock indicators
 
 ### Sprint 24 (Phase 22B) — 2026-04-28
-- **Demo Seed Data**: `rahaza_demo_seed.py` — POST `/api/rahaza/seed-demo` (idempotent)
-- **LKP Bulk Print**: GET `/api/rahaza/lkp-bulk-today` + "Cetak LKP Massal" button in Work Orders header
-- **Shift Handover frontend**: `RahazaShiftHandoverModule.jsx` — create/view handovers + sign-off flow (modal, status badge, supervisor acknowledgement)
-- **Material Reservation frontend**: `RahazaMaterialReservationModule.jsx` — Per WO + Per Material tabs, reserve/release UI
-- **Production Calendar**: `rahaza_production_calendar.py` + `RahazaProductionCalendarModule.jsx` — calendar, holidays, working days calculator
-- **PWA**: `manifest.json` + `sw.js` service worker with cache-first static / network-first API strategy
-- **Admin list endpoint**: GET `/api/rahaza/material-reservations`
+- Demo Seed Data, LKP Bulk Print, Shift Handover frontend, Material Reservation UI
+- Production Calendar, PWA manifest+sw, Admin material-reservation list
 
 ### Sprint 25 (P1/P2 Backlog) — 2026-04-29
-- **WO Release auto-reservation**: WO status → released now auto-triggers `_auto_reserve_materials_for_wo` and returns `material_reservation: {reserved_count, warnings, has_warnings}` in response
-- **APS Gantt + Production Calendar**: GET `/api/rahaza/aps/gantt` now includes `holidays[]` array; Frontend APSGanttModule highlights holiday columns in red
-- **Shift Handover sign-off**: POST `/api/rahaza/shift-handovers/{id}/sign-off` — stores signed_off_by, signed_off_at, sign_off_notes; Frontend adds Sign Off button + confirmation modal + signed-off badge
-- **Service Worker (full PWA)**: `/sw.js` registered in index.js — Cache-First for static assets, Network-First for API, offline fallback for HTML
-- **OEE Dashboard**: `RahazaOEEModule.jsx` — KPI cards (OEE/Availability/Performance/Quality), Recharts line/bar charts, per-line table with drilldown, date range + line filter. Registered as `prod-oee` in nav (Produksi > Monitoring)
+- WO Release auto-reservation
+- APS Gantt + Production Calendar holiday overlay
+- Shift Handover sign-off flow
+- Service Worker (full PWA)
+- OEE Dashboard
+
+### Sprint 26 (P0/P2 Final) — 2026-04-29
+- **End-of-Shift PDF Report**: `utils/shift_report_pdf.py` + GET `/api/rahaza/shift-handovers/{id}/pdf`
+- **LKP Foto Otomatis**: `utils/lkp_pdf.py` Section L "FOTO PRODUKSI & QC" rendered from `rahaza_lkp_photos`. Async fetch via aiohttp + Emergent Storage. Cache invalidated by `pdf_stale` flag on photo upload (regen+re-cache).
+- **Panduan Penggunaan ERP**: `RahazaUserGuideModule.jsx` (707 lines) — search bar, 8 test scenarios (S1–S8 incl. defect→rework, mesin breakdown, shift malam, hari libur, etc.), 5 portal sections w/ accordion, Test Scenarios & Use Cases, Tips/FAQ/Troubleshooting. Routed via `mgmt-help` (replaces legacy HelpGuideModule).
+- **Frontend Shift PDF download**: `RahazaShiftHandoverModule.jsx` `downloadHandoverPdf` (Bearer auth via fetch+blob, replaces broken `<a href>`)
 
 ---
 
 ## Test Credentials
-- **Admin**: admin@garment.com / Admin@123
+- **Admin**: admin@garment.com / Admin@123 (see `/app/memory/test_credentials.md`)
 
 ---
 
 ## Prioritized Backlog
 
-### P0 (Critical / Quick Wins)
-- [ ] LKP foto otomatis muncul di PDF (upload foto langsung terlihat)
+### P0 — All Done ✅
+- [x] LKP foto otomatis muncul di PDF (Sprint 26)
 
-### P1 (Done ✅ or Remaining)
-- [x] Production Calendar ↔ APS integration — DONE
-- [x] Material Reservation auto-trigger saat WO release — DONE
-- [x] Shift Handover sign-off flow — DONE
-- [x] OEE Dashboard — DONE
+### P1 — All Done ✅
+- [x] Production Calendar ↔ APS integration
+- [x] Material Reservation auto-trigger saat WO release
+- [x] Shift Handover sign-off flow
+- [x] OEE Dashboard
 - [ ] OEE data seeding / event log from actual WIP recording
 
 ### P2 (Medium)
-- [ ] End-of-Shift PDF Report
+- [x] End-of-Shift PDF Report (Sprint 26)
 - [ ] WhatsApp/Telegram notification (low stock, WO due date)
 - [ ] Style Master 2.0 (design image management)
 - [ ] AQL Sampling Tool (inline QC)
@@ -122,9 +117,27 @@ Membangun sistem ERP terpadu untuk PT Rahaza Global Indonesia — pabrik garment
 
 ---
 
-## Next Tasks List (Recommended)
-1. Material Reservation auto-trigger on WO release
-2. Production Calendar ↔ APS integration
-3. OEE Dashboard (already has rahaza_oee.py backend)
-4. Shift Handover sign-off (supervisor acknowledgement)
-5. Service Worker for offline capability (full PWA)
+## Next Recommended Tasks
+1. OEE event-log auto-seeding from WIP recording
+2. WhatsApp/Telegram notification stack
+3. Style Master 2.0 (design images, version control)
+4. AQL Sampling Tool inline QC
+
+---
+
+## Known APIs (Sprint 26)
+- `GET /api/rahaza/lkp/{id}/pdf` — generate or fetch cached LKP PDF (auto-includes photos)
+- `POST /api/rahaza/lkp/{id}/photos` — upload QC/production photo (sets pdf_stale=True)
+- `GET /api/rahaza/shift-handovers/{id}/pdf` — End-of-Shift PDF Report
+- `POST /api/rahaza/shift-handovers/{id}/sign-off` — supervisor acknowledgement
+
+---
+
+## Critical Files
+- `/app/backend/utils/lkp_pdf.py` — LKP PDF builder (sections A–L)
+- `/app/backend/utils/shift_report_pdf.py` — End-of-Shift PDF builder (sections A–G)
+- `/app/backend/routes/rahaza_lkp.py` — `_generate_pdf_bytes` (aiohttp), pdf_stale-aware download cache
+- `/app/backend/routes/rahaza_shift_handover.py` — `download_shift_report_pdf` endpoint
+- `/app/frontend/src/components/erp/RahazaUserGuideModule.jsx` — 707-line user guide
+- `/app/frontend/src/components/erp/moduleRegistry.js` — `mgmt-help → RahazaUserGuideModule`
+- `/app/frontend/src/components/erp/RahazaShiftHandoverModule.jsx` — `downloadHandoverPdf`
