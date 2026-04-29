@@ -447,10 +447,11 @@ async def download_lkp_pdf(lkp_id: str, request: Request, auth: Optional[str] = 
     if not doc:
         raise HTTPException(404, "LKP tidak ditemukan")
 
-    # If pdf was previously stored, serve cached
+    # If pdf was previously stored AND not marked stale (e.g. by photo upload), serve cached
     pdf_path = doc.get("pdf_storage_path")
     pdf_bytes = None
-    if pdf_path:
+    is_stale = bool(doc.get("pdf_stale"))
+    if pdf_path and not is_stale:
         try:
             data, _ = get_object(pdf_path)
             pdf_bytes = data
@@ -486,6 +487,30 @@ async def download_lkp_pdf(lkp_id: str, request: Request, auth: Optional[str] = 
         except Exception as e:
             logger.exception("LKP regen PDF failed")
             raise HTTPException(500, "Gagal generate PDF. Silakan coba lagi.")
+
+        # Persist regenerated PDF & clear stale flag so subsequent downloads use cache
+        try:
+            new_path = generate_storage_path(user_id or "system", f"{doc.get('lkp_number','LKP')}.pdf")
+            result = put_object(new_path, pdf_bytes, "application/pdf")
+            new_storage_path = result.get("path", new_path)
+            # Best-effort delete previous cached file
+            old_path = doc.get("pdf_storage_path")
+            if old_path and old_path != new_storage_path:
+                try:
+                    delete_object(old_path)
+                except Exception as _e:
+                    logger.warning(f"LKP old PDF delete failed: {_e}")
+            await db.rahaza_lkp.update_one(
+                {"id": lkp_id},
+                {"$set": {
+                    "pdf_storage_path": new_storage_path,
+                    "pdf_size": len(pdf_bytes),
+                    "pdf_stale": False,
+                    "updated_at": _now(),
+                }}
+            )
+        except Exception as e:
+            logger.warning(f"LKP regenerated PDF storage failed: {e}")
 
     # M8: Audit timestamp as datetime
     audit_entry = {

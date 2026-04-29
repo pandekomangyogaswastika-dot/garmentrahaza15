@@ -65,6 +65,28 @@ export default function RahazaShiftHandoverModule({ token }) {
   const addIssue = () => setForm(f => ({ ...f, issues: [...f.issues, { type: 'mesin', description: '', priority: 'medium' }] }));
   const addTask = () => setForm(f => ({ ...f, pending_tasks: [...f.pending_tasks, { description: '', assigned_to: '' }] }));
 
+  const downloadHandoverPdf = async (h) => {
+    try {
+      const r = await fetch(`/api/rahaza/shift-handovers/${h.id}/pdf`, { headers: hdrs });
+      if (!r.ok) {
+        setMsg({ type: 'error', text: 'Gagal mengunduh PDF laporan shift' });
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Laporan-Shift_${h.date || ''}_${h.shift_name || h.shift_code || ''}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setMsg({ type: 'success', text: 'Laporan PDF berhasil diunduh' });
+    } catch {
+      setMsg({ type: 'error', text: 'Gagal mengunduh PDF' });
+    }
+  };
+
   const handleSignOff = async () => {
     if (!signOffId) return;
     setSignOffSaving(true);
@@ -345,14 +367,14 @@ export default function RahazaShiftHandoverModule({ token }) {
               {expandId === h.id && (
                 <div className="px-5 pb-5 border-t border-[var(--glass-border)] pt-4 space-y-4">
                   <div className="flex justify-end">
-                    <a
-                      href={`/api/rahaza/shift-handovers/${h.id}/pdf`}
-                      target="_blank" rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => downloadHandoverPdf(h)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 text-xs hover:bg-blue-500/10 transition-colors"
                       data-testid={`download-pdf-${h.id}`}
                     >
-                      <Download className="w-3.5 h-3.5" /> Download PDF
-                    </a>
+                      <Download className="w-3.5 h-3.5" /> Download Laporan PDF
+                    </button>
                   </div>
                   {h.notes && (
                     <div>

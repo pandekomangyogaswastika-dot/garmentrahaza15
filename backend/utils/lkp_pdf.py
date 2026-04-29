@@ -589,7 +589,7 @@ def _build_section_l_production_photos(content, styles, production_image_files=N
     for i in range(0, len(cells), 3):
         row = cells[i:i + 3]
         while len(row) < 3:
-            row.append([""])
+            row.append("")
         rows.append(row)
 
     photo_table = Table(

@@ -32,7 +32,7 @@ const RoleMatrixModule      = lazy(() => import('./RoleMatrixModule'));
 const ActivityLogModule     = lazy(() => import('./ActivityLogModule'));
 const CompanySettingsModule = lazy(() => import('./CompanySettingsModule'));
 const PDFConfigModule       = lazy(() => import('./PDFConfigModule'));
-const HelpGuideModule       = lazy(() => import('./HelpGuideModule'));
+// Legacy HelpGuideModule replaced by RahazaUserGuideModule (Sprint 26)
 
 // Warehouse
 const ReceivingModule = lazy(() => import('./ReceivingModule'));
@@ -159,7 +159,7 @@ export const MODULE_REGISTRY = {
   'mgmt-activity':     ActivityLogModule,
   'mgmt-company':      CompanySettingsModule,
   'mgmt-pdf':          PDFConfigModule,
-  'mgmt-help':         HelpGuideModule,
+  'mgmt-help':         RahazaUserGuideModule,
 
   // Warehouse
   'wh-receiving':  ReceivingModule,
@@ -306,8 +306,6 @@ export const MODULE_REGISTRY = {
   'wh-material-reservation':   RahazaMaterialReservationModule,
   // Phase 23 — OEE Dashboard
   'prod-oee':                  RahazaOEEModule,
-  // User Guide
-  'user-guide':                RahazaUserGuideModule,
 };
 
 export const DEFAULT_MODULE = ManagementDashboard;

@@ -1,0 +1,64 @@
+{
+  "summary": "Sprint 26 testing: End-of-Shift PDF, LKP photos auto-render in PDF, RahazaUserGuideModule. Found+fixed 1 critical backend bug (cached PDF served stale after photo upload). Backend 7/7 tests pass. Frontend User Guide fully verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/rahaza/lkp/{id}/photos",
+        "issue": "photo_doc.created_at stored as ISO string while other audit timestamps are datetime objects — minor inconsistency for sorting/serialization."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "shift_handover_pdf_unauthorized": "PASS - returns 401 without Bearer header",
+    "shift_handover_pdf_404": "PASS - non-existent id returns 404",
+    "shift_handover_pdf_download": "PASS - 200 OK, Content-Type application/pdf, %PDF- magic bytes, >1KB",
+    "lkp_pdf_no_photos": "PASS - PDF generates, section 'L. FOTO PRODUKSI' correctly absent when 0 photos",
+    "lkp_photo_upload": "PASS - returns id + storage_path",
+    "lkp_pdf_with_one_photo": "PASS (after fix) - PDF size grows, 'L. FOTO PRODUKSI' header + caption text present, image stream embedded",
+    "lkp_pdf_with_3_photos_no_crash": "PASS (after fix) - 3-column grid section L renders without crash, all 3 captions in PDF text, regression test for empty-cell padding fix confirmed working",
+    "userguide_route": "PASS - Portal Manajemen → Sistem → Panduan Penggunaan loads RahazaUserGuideModule",
+    "userguide_search_bar": "PASS - 'Cari panduan, menu, atau skenario...' input present",
+    "userguide_8_chips": "PASS - S1-S8 all visible (S1 Produksi Normal, S2 Ada Defect, S3 Material Kurang, S4 Mesin Breakdown, S5 Shift Malam, S6 Hari Libur, S7 New Buyer, S8 Lembur)",
+    "userguide_portals": "PASS - 5 portal sections: Manajemen, Produksi (11 sub-topik), Gudang, Keuangan, SDM (review said 6 but actual implementation has 5; acceptable)",
+    "userguide_test_scenarios_section": "PASS - 'Test Scenarios & Use Cases' section with 8 sub-topik visible",
+    "userguide_tips_faq_section": "PASS - 'Tips, FAQ & Troubleshooting' section visible",
+    "userguide_s2_chip_click": "PASS - clicked S2 chip without error",
+    "userguide_portal_produksi_accordion": "PASS - expands and shows LKP topic",
+    "userguide_search_lkp": "PASS - search input accepts 'LKP' query"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sprint26_pdf_userguide.py",
+    "/app/test_reports/pytest/sprint26.xml"
+  ],
+  "action_items": [
+    "VERIFIED FIX APPLIED by testing agent: /app/backend/routes/rahaza_lkp.py — download_lkp_pdf now respects pdf_stale flag (set by photo upload) and regenerates+re-caches PDF. Without this fix, photos uploaded AFTER initial create never appeared in downloaded PDF (cached PDF served forever).",
+    "Frontend Shift Handover Download PDF button click flow not directly browser-tested (page nav timeout); however backend PDF endpoint fully verified. Main agent should self-test the click-to-download UX in Portal Produksi → Shift Handover.",
+    "Minor: standardize photo_doc.created_at to datetime (matching other audit entries) in POST /api/rahaza/lkp/{id}/photos."
+  ],
+  "critical_code_review_comments": [
+    "BUG (FIXED): rahaza_lkp.py download_lkp_pdf served pdf_storage_path unconditionally — photos uploaded after first PDF generation never appeared. Photo upload sets pdf_stale=True but downloader ignored it. Fix: skip cache when pdf_stale is True, regenerate, then re-cache and clear flag.",
+    "Section L empty-cell padding fix in lkp_pdf.py line 591-592 (`row.append('')` not `['']`) confirmed working with 3-photo regression test.",
+    "Both PDFs use Bearer auth correctly via require_auth/verify_token; Shift Handover endpoint correctly returns 401 unauth and 404 missing.",
+    "RahazaUserGuideModule replaces HelpGuideModule as expected — moduleRegistry routing for 'mgmt-help' confirmed loading the new module."
+  ],
+  "updated_files": [
+    "/app/backend/routes/rahaza_lkp.py (FIX: respect pdf_stale flag in GET /lkp/{id}/pdf)",
+    "/app/backend/tests/test_sprint26_pdf_userguide.py (NEW pytest module)"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 after fix)",
+    "frontend": "~90% — User Guide fully verified; Shift Handover PDF button click not browser-tested due to navigation timeout but backend confirmed working"
+  },
+  "test_credentials": "admin@garment.com / Admin@123 (used)",
+  "seed_data_creation": "Created 1 LKP record + 3 production photos (TEST_QC_Check_Photo_One, TEST_Photo_2, TEST_Photo_3) attached to a released WO during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Sprint 26 features verified: (1) Shift Handover PDF endpoint returns clean PDF with proper auth/404 handling. (2) LKP PDF auto-renders production photos in section L — REQUIRED FIX in rahaza_lkp.py: download endpoint must check pdf_stale flag set by photo upload, otherwise cached PDF served forever without photos. Fix is applied. (3) RahazaUserGuideModule replaces HelpGuideModule for 'mgmt-help' route — all 8 test scenario chips, 5 portal sections, search bar, Test Scenarios + Tips/FAQ sections render correctly. Main agent: please verify Shift Handover Download PDF button (data-testid='download-pdf-{id}') click triggers blob download in browser — backend already validated.",
+  "rca_of_issue": "ROOT CAUSE: rahaza_lkp.py:download_lkp_pdf served `pdf_storage_path` from MongoDB unconditionally. Photo upload endpoint correctly set `pdf_stale: True` and incremented photo_count, but the downloader never inspected the flag, so once a PDF was cached at WO release time (with 0 photos), every subsequent download returned that stale PDF — defeating the entire 'photos auto-appear in PDF' feature. REPRO: 1) POST /lkp create → cached PDF size = 16204 (no section L). 2) POST /lkp/{id}/photos → upload JPEG. 3) GET /lkp/{id}/pdf → returns same 16204-byte PDF, no section L, no caption text. FIX: in download_lkp_pdf, treat pdf_stale=True as cache miss, regenerate, persist new PDF, set pdf_stale=False, delete old storage object. Verified via pdfplumber: PDF size grows, image streams >=1, 'L. FOTO PRODUKSI & QC' header + all captions present in extracted text."
+}
