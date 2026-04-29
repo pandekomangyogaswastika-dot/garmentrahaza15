@@ -74,13 +74,19 @@ Membangun sistem ERP terpadu untuk PT Rahaza Global Indonesia — pabrik garment
 
 ### Sprint 24 (Phase 22B) — 2026-04-28
 - **Demo Seed Data**: `rahaza_demo_seed.py` — POST `/api/rahaza/seed-demo` (idempotent)
-  - Seeded: 15 employees, 10 materials (yarn+accessory+packaging), 5 WOs, 5 models, 3 orders, 3 customers, 4 SOPs, 30 attendance records
-- **LKP Bulk Print**: GET `/api/rahaza/lkp-bulk-today` — lists all active WOs with LKP status. "Cetak LKP Massal" button in Work Orders header
-- **Shift Handover frontend**: `RahazaShiftHandoverModule.jsx` — create/view handovers with checklist, issues, pending tasks. Nav: Produksi > Eksekusi > Shift Handover
-- **Material Reservation frontend**: `RahazaMaterialReservationModule.jsx` — Per WO + Per Material tabs, reserve/release UI. Nav: Produksi + Gudang
-- **Production Calendar**: `rahaza_production_calendar.py` + `RahazaProductionCalendarModule.jsx` — monthly calendar, CRUD exceptions, national holiday seed, working days calculator. Nav: Produksi > Master Data > Kalender Produksi
-- **PWA**: `manifest.json` added to `/app/frontend/public/`, page title updated to "PT Rahaza ERP"
-- **Admin list endpoint**: GET `/api/rahaza/material-reservations` — paginated list with filters
+- **LKP Bulk Print**: GET `/api/rahaza/lkp-bulk-today` + "Cetak LKP Massal" button in Work Orders header
+- **Shift Handover frontend**: `RahazaShiftHandoverModule.jsx` — create/view handovers + sign-off flow (modal, status badge, supervisor acknowledgement)
+- **Material Reservation frontend**: `RahazaMaterialReservationModule.jsx` — Per WO + Per Material tabs, reserve/release UI
+- **Production Calendar**: `rahaza_production_calendar.py` + `RahazaProductionCalendarModule.jsx` — calendar, holidays, working days calculator
+- **PWA**: `manifest.json` + `sw.js` service worker with cache-first static / network-first API strategy
+- **Admin list endpoint**: GET `/api/rahaza/material-reservations`
+
+### Sprint 25 (P1/P2 Backlog) — 2026-04-29
+- **WO Release auto-reservation**: WO status → released now auto-triggers `_auto_reserve_materials_for_wo` and returns `material_reservation: {reserved_count, warnings, has_warnings}` in response
+- **APS Gantt + Production Calendar**: GET `/api/rahaza/aps/gantt` now includes `holidays[]` array; Frontend APSGanttModule highlights holiday columns in red
+- **Shift Handover sign-off**: POST `/api/rahaza/shift-handovers/{id}/sign-off` — stores signed_off_by, signed_off_at, sign_off_notes; Frontend adds Sign Off button + confirmation modal + signed-off badge
+- **Service Worker (full PWA)**: `/sw.js` registered in index.js — Cache-First for static assets, Network-First for API, offline fallback for HTML
+- **OEE Dashboard**: `RahazaOEEModule.jsx` — KPI cards (OEE/Availability/Performance/Quality), Recharts line/bar charts, per-line table with drilldown, date range + line filter. Registered as `prod-oee` in nav (Produksi > Monitoring)
 
 ---
 
@@ -94,18 +100,18 @@ Membangun sistem ERP terpadu untuk PT Rahaza Global Indonesia — pabrik garment
 ### P0 (Critical / Quick Wins)
 - [ ] LKP foto otomatis muncul di PDF (upload foto langsung terlihat)
 
-### P1 (High Value)
-- [ ] Production Calendar: link with APS scheduler (block dates on APS)
-- [ ] Material Reservation auto-block saat WO release (currently manual)
-- [ ] OEE Dashboard (Machine efficiency tracking)
-- [ ] Shift Handover: supervisor acknowledgement / sign-off flow
+### P1 (Done ✅ or Remaining)
+- [x] Production Calendar ↔ APS integration — DONE
+- [x] Material Reservation auto-trigger saat WO release — DONE
+- [x] Shift Handover sign-off flow — DONE
+- [x] OEE Dashboard — DONE
+- [ ] OEE data seeding / event log from actual WIP recording
 
 ### P2 (Medium)
 - [ ] End-of-Shift PDF Report
-- [ ] WhatsApp Bot notification (low stock, WO due)
+- [ ] WhatsApp/Telegram notification (low stock, WO due date)
 - [ ] Style Master 2.0 (design image management)
 - [ ] AQL Sampling Tool (inline QC)
-- [ ] Service Worker / offline support (full PWA)
 
 ### P3 (Polish / Future)
 - [ ] Replace native select → Shadcn Combobox
