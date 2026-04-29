@@ -1,0 +1,67 @@
+{
+  "summary": "Sprint 5 testing: 5 P1/P2 features - Material Reservation auto-trigger on WO release, APS Gantt holiday integration, Shift Handover sign-off, OEE Dashboard, PWA Service Worker. All 5 features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PATCH /api/rahaza/work-orders/{id}/status",
+        "issue": "Method is POST not PATCH — review request states PATCH but actual endpoint is POST /api/rahaza/work-orders/{wid}/status. Works correctly with POST.",
+        "priority": "LOW - documentation mismatch only"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "RahazaOEEModule",
+        "issue": "React warning: <span> cannot be child of <option> in line filter select dropdown. Missing 'key' prop on list items. Functional but produces console errors.",
+        "selector": "select > option > span",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "OEE Dashboard",
+        "issues": ["OEE nav is in MONITORING section not Quality & Analytics — which is correct per PortalShell config. Review request says 'analytics section' but it's actually in 'monitoring' section. This is acceptable."]
+      }
+    ]
+  },
+  "test_results": {
+    "wo_release_material_reservation": "PASS - POST /api/rahaza/work-orders/{id}/status with status=released returns material_reservation: {reserved_count: 1, warnings: [], has_warnings: false}",
+    "wo_reservations_created": "PASS - GET /api/rahaza/work-orders/{id}/reservations returns 1 item after release",
+    "aps_gantt_holidays": "PASS - GET /api/rahaza/aps/gantt includes holidays array with May 1 (Hari Buruh) and May 14 (Kenaikan)",
+    "aps_gantt_holiday_highlight": "PASS - May 1 and May 14 columns highlighted in red/pink in Gantt UI",
+    "shift_handover_sign_off_button": "PASS - Sign Off button visible on active handover cards",
+    "shift_handover_sign_off_api": "PASS - POST /api/rahaza/shift-handovers/{id}/sign-off returns status: signed_off",
+    "shift_handover_sign_off_modal": "PASS - Modal opens with notes textarea and Konfirmasi Sign Off button",
+    "oee_dashboard_loads": "PASS - OEE Dashboard accessible at prod-oee route",
+    "oee_kpi_cards": "PASS - OEE Rata-Rata, Availability, Performance, Quality Rate cards visible",
+    "oee_date_range_filter": "PASS - Date range and line filter visible",
+    "oee_charts": "PASS - Tren OEE per Hari and OEE per Lini charts render (empty state graceful)",
+    "sw_js": "PASS - /sw.js returns 200 with valid PWA service worker JS",
+    "manifest_json": "PASS - /manifest.json returns 200",
+    "kalender_produksi_nav": "PASS - Kalender Produksi visible in Produksi portal Master Data section",
+    "oee_dashboard_nav": "PASS - Dashboard OEE visible in Produksi portal Monitoring section"
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix React warning in RahazaOEEModule: <span> inside <option> in line filter select — use string/text directly instead of JSX span",
+    "Fix missing key prop on list items in RahazaOEEModule",
+    "Documentation: WO status change endpoint is POST not PATCH"
+  ],
+  "critical_code_review_comments": [
+    "RahazaOEEModule uses <span> inside <option> which is invalid HTML and causes React hydration warnings. Fix: replace with plain string l.name || l.id",
+    "Missing 'key' props on list items in OEE module"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% - all 5 new backend features working",
+    "frontend": "100% - all 5 new frontend features working"
+  },
+  "seed_data_creation": "Created 2 shift handover records via API for testing: one signed_off (2026-04-28), one active (2026-04-29)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 5 P1/P2 sprint features working: (1) WO release auto-creates material reservations via POST /api/rahaza/work-orders/{id}/status, (2) APS Gantt shows May 1 and May 14 holidays highlighted in red, (3) Shift handover sign-off flow complete with modal, (4) OEE Dashboard in Monitoring section with KPI cards and charts, (5) /sw.js and /manifest.json both return 200. Only minor issue: React warning for <span> inside <option> in OEE line filter.",
+  "rca_of_issues": "RahazaOEEModule renders line options as: <option key={l.id} value={l.id}><span>{l.name}</span></option>. HTML spec prohibits block/inline elements inside <option>. Fix: change to <option key={l.id} value={l.id}>{l.name || l.id}</option>"
+}

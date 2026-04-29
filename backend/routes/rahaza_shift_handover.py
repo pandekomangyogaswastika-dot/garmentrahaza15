@@ -222,6 +222,46 @@ async def get_shift_handover(handover_id: str, request: Request):
     return handover
 
 
+@router.post("/shift-handovers/{handover_id}/sign-off")
+async def sign_off_handover(handover_id: str, request: Request):
+    """
+    Supervisor/next-shift sign-off on a handover.
+    Body: {notes (optional)}
+    Transitions status: active → signed_off
+    """
+    user = await require_auth(request)
+    db = get_db()
+
+    handover = await db.rahaza_shift_handovers.find_one({"id": handover_id}, {"_id": 0})
+    if not handover:
+        raise HTTPException(404, "Shift handover tidak ditemukan")
+    if handover.get("status") == "signed_off":
+        raise HTTPException(400, "Handover sudah di-sign off sebelumnya")
+    if handover.get("status") == "cancelled":
+        raise HTTPException(400, "Handover telah dibatalkan")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    sign_off_notes = body.get("notes", "")
+
+    upd = {
+        "status": "signed_off",
+        "signed_off_by_id": user.get("id"),
+        "signed_off_by_name": user.get("name", user.get("email")),
+        "signed_off_at": _now().isoformat(),
+        "sign_off_notes": sign_off_notes,
+        "updated_at": _now().isoformat(),
+    }
+    await db.rahaza_shift_handovers.update_one({"id": handover_id}, {"$set": upd})
+
+    updated = await db.rahaza_shift_handovers.find_one({"id": handover_id}, {"_id": 0})
+    logger.info(f"Handover {handover_id} signed off by {user.get('name')}")
+    return updated
+
+
 @router.put("/shift-handovers/{handover_id}")
 async def update_shift_handover(handover_id: str, request: Request):
     """

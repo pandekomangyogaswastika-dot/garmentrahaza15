@@ -324,6 +324,17 @@ export default function APSGanttModule({ token }) {
     return diffDays(parseISO(days[0]), t);
   }, [data, days]);
 
+  // Production Calendar holidays — Set of YYYY-MM-DD strings for fast lookup
+  const holidaySet = useMemo(() => {
+    const holidays = data?.holidays || [];
+    return new Set(holidays.map(h => h.date));
+  }, [data]);
+  const holidayMap = useMemo(() => {
+    const m = {};
+    (data?.holidays || []).forEach(h => { m[h.date] = h.name; });
+    return m;
+  }, [data]);
+
   // Line-level aggregated KPI (today WIP count, active WO count)
   const lineKpi = useMemo(() => {
     const m = new Map();
@@ -643,16 +654,27 @@ export default function APSGanttModule({ token }) {
                   {dayObjs.map((d, i) => {
                     const weekend = d.getDay() === 0 || d.getDay() === 6;
                     const isToday = i === todayIdx;
+                    const isHoliday = holidaySet.has(days[i]);
+                    const holidayName = holidayMap[days[i]];
                     return (
                       <div
                         key={days[i]}
-                        className={`flex flex-col items-center justify-center border-r border-[color:var(--aps-grid-line)] ${weekend ? 'bg-foreground/5' : ''} ${isToday ? 'bg-sky-400/10' : ''}`}
+                        className={`flex flex-col items-center justify-center border-r border-[color:var(--aps-grid-line)] relative
+                          ${weekend ? 'bg-foreground/5' : ''}
+                          ${isToday ? 'bg-sky-400/10' : ''}
+                          ${isHoliday ? 'bg-red-500/15' : ''}`}
                         style={{ width: pxPerDay, minWidth: pxPerDay }}
+                        title={isHoliday ? `Hari Libur: ${holidayName}` : undefined}
                       >
-                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-mono">
+                        {isHoliday && (
+                          <span className="absolute top-0.5 left-0 right-0 h-0.5 bg-red-500/60 rounded-full" />
+                        )}
+                        <span className="text-[9px] uppercase tracking-wider font-mono"
+                          style={{ color: isHoliday ? 'rgb(248,113,113)' : 'var(--muted-foreground)' }}>
                           {zoom === 'day' ? fmtWeekday(d) : ''}
                         </span>
-                        <span className={`text-[10px] font-mono tabular-nums ${isToday ? 'text-sky-300 font-bold' : 'text-foreground'}`}>
+                        <span className={`text-[10px] font-mono tabular-nums
+                          ${isToday ? 'text-sky-300 font-bold' : isHoliday ? 'text-red-400 font-semibold' : 'text-foreground'}`}>
                           {fmtShort(d)}
                         </span>
                       </div>
@@ -707,16 +729,21 @@ export default function APSGanttModule({ token }) {
 
                     {/* Timeline area */}
                     <div className="relative" style={{ width: timelineWidth }}>
-                      {/* Grid lines (weekends + today) — background only, no click */}
+                      {/* Grid lines (weekends + holidays + today) — background only, no click */}
                       <div className="absolute inset-0 flex pointer-events-none" aria-hidden="true">
                         {dayObjs.map((d, i) => {
                           const weekend = d.getDay() === 0 || d.getDay() === 6;
                           const isToday = i === todayIdx;
+                          const isHoliday = holidaySet.has(days[i]);
                           return (
                             <div
                               key={i}
-                              className={`border-r border-[color:var(--aps-grid-line)] ${weekend ? 'bg-foreground/5' : ''} ${isToday ? 'bg-sky-400/5' : ''}`}
+                              className={`border-r border-[color:var(--aps-grid-line)]
+                                ${weekend ? 'bg-foreground/5' : ''}
+                                ${isToday ? 'bg-sky-400/5' : ''}
+                                ${isHoliday ? 'bg-red-500/10' : ''}`}
                               style={{ width: pxPerDay, minWidth: pxPerDay }}
+                              title={isHoliday ? holidayMap[days[i]] : undefined}
                             />
                           );
                         })}

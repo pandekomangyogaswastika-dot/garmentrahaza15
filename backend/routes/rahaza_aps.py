@@ -368,7 +368,24 @@ async def gantt(
         "bars": bars,
         "capacity": capacity_list,
         "kpis": kpis,
+        # Production Calendar integration — holidays in range for Gantt highlight
+        "holidays": await _get_holidays_in_range(db, start_d, end_d),
     })
+
+
+async def _get_holidays_in_range(db, start_d: date, end_d: date) -> list:
+    """Fetch production calendar holidays within the given date range."""
+    try:
+        docs = await db.rahaza_production_calendar.find(
+            {
+                "type": "holiday",
+                "date": {"$gte": start_d.isoformat(), "$lte": end_d.isoformat()},
+            },
+            {"_id": 0, "date": 1, "name": 1, "type": 1},
+        ).to_list(None)
+        return docs
+    except Exception:
+        return []
 
 
 # ─── GET /aps/wo/{wo_id} ─────────────────────────────────────────────────────

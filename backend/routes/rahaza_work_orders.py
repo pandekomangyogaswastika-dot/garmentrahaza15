@@ -465,7 +465,19 @@ async def transition_wo(wid: str, request: Request):
     await log_audit(db, entity_type="rahaza_work_order", entity_id=wid, action="status_change",
                     before={"status": current}, after={"status": new_status},
                     user=user, request=request)
-    return {"status": new_status, "work_order_id": wid}
+
+    response = {"status": new_status, "work_order_id": wid}
+    # Include material reservation summary when WO is released
+    if new_status == "released":
+        updated_wo = await db.rahaza_work_orders.find_one({"id": wid}, {"_id": 0, "material_reservation_warnings": 1})
+        warnings = (updated_wo or {}).get("material_reservation_warnings", [])
+        reserved_count = await db.rahaza_material_reservations.count_documents({"wo_id": wid, "status": "active"})
+        response["material_reservation"] = {
+            "reserved_count": reserved_count,
+            "warnings": warnings,
+            "has_warnings": len(warnings) > 0,
+        }
+    return response
 
 
 @router.delete("/work-orders/{wid}")

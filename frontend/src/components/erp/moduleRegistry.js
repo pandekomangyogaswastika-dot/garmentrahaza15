@@ -132,6 +132,8 @@ const RahazaLineBalancingModule = lazy(() => import('./RahazaLineBalancingModule
 const RahazaShiftHandoverModule      = lazy(() => import('./RahazaShiftHandoverModule'));
 const RahazaMaterialReservationModule = lazy(() => import('./RahazaMaterialReservationModule'));
 const RahazaProductionCalendarModule  = lazy(() => import('./RahazaProductionCalendarModule'));
+// Phase 23 — OEE Dashboard
+const RahazaOEEModule = lazy(() => import('./RahazaOEEModule'));
 
 // Module map — id → component. IDs MUST be unique.
 export const MODULE_REGISTRY = {
@@ -300,6 +302,8 @@ export const MODULE_REGISTRY = {
   'prod-material-reservation': RahazaMaterialReservationModule,
   'prod-production-calendar':  RahazaProductionCalendarModule,
   'wh-material-reservation':   RahazaMaterialReservationModule,
+  // Phase 23 — OEE Dashboard
+  'prod-oee':                  RahazaOEEModule,
 };
 
 export const DEFAULT_MODULE = ManagementDashboard;

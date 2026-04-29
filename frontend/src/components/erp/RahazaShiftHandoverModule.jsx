@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye, RefreshCw, Calendar } from 'lucide-react';
+import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye, RefreshCw, Calendar, BadgeCheck, X } from 'lucide-react';
 
 const STATUS_LABEL = { present: 'Hadir', absent: 'Alpha', late: 'Terlambat' };
 const STATUS_COLOR = { present: 'text-emerald-400', absent: 'text-red-400', late: 'text-amber-400' };
@@ -21,6 +21,9 @@ export default function RahazaShiftHandoverModule({ token }) {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [expandId, setExpandId] = useState(null);
+  const [signOffId, setSignOffId] = useState(null); // modal sign-off
+  const [signOffNotes, setSignOffNotes] = useState('');
+  const [signOffSaving, setSignOffSaving] = useState(false);
   const [form, setForm] = useState({
     shift_id: '', date: new Date().toISOString().slice(0, 10), notes: '',
     checklist: [
@@ -62,8 +65,31 @@ export default function RahazaShiftHandoverModule({ token }) {
   const addIssue = () => setForm(f => ({ ...f, issues: [...f.issues, { type: 'mesin', description: '', priority: 'medium' }] }));
   const addTask = () => setForm(f => ({ ...f, pending_tasks: [...f.pending_tasks, { description: '', assigned_to: '' }] }));
 
-  const handleSubmit = async () => {
-    if (!form.shift_id) return setMsg({ type: 'error', text: 'Pilih shift terlebih dahulu' });
+  const handleSignOff = async () => {
+    if (!signOffId) return;
+    setSignOffSaving(true);
+    try {
+      const res = await fetch(`/api/rahaza/shift-handovers/${signOffId}/sign-off`, {
+        method: 'POST',
+        headers: { ...hdrs, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: signOffNotes }),
+      });
+      if (res.ok) {
+        setMsg({ type: 'success', text: 'Handover berhasil di-sign off' });
+        setSignOffId(null);
+        setSignOffNotes('');
+        await loadData();
+      } else {
+        const e = await res.json();
+        setMsg({ type: 'error', text: e.detail || 'Gagal sign off' });
+      }
+    } finally {
+      setSignOffSaving(false);
+      setTimeout(() => setMsg(null), 4000);
+    }
+  };
+
+  const handleSubmit = async () => {    if (!form.shift_id) return setMsg({ type: 'error', text: 'Pilih shift terlebih dahulu' });
     setSaving(true);
     try {
       const res = await fetch('/api/rahaza/shift-handovers', {
@@ -283,7 +309,20 @@ export default function RahazaShiftHandoverModule({ token }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 flex-wrap">
+                    {h.status === 'signed_off' ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <BadgeCheck className="w-3 h-3" /> Signed Off
+                      </span>
+                    ) : (
+                      <button
+                        onClick={e => { e.stopPropagation(); setSignOffId(h.id); setSignOffNotes(''); }}
+                        className="px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20 hover:bg-blue-500/20 transition-colors flex items-center gap-1"
+                        data-testid={`signoff-btn-${h.id}`}
+                      >
+                        <BadgeCheck className="w-3 h-3" /> Sign Off
+                      </button>
+                    )}
                     {h.checklist?.filter(c => c.value).length > 0 && (
                       <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
                         {h.checklist.filter(c => c.value).length}/{h.checklist.length} OK
@@ -301,8 +340,7 @@ export default function RahazaShiftHandoverModule({ token }) {
                     )}
                   </div>
                   {expandId === h.id ? <ChevronUp className="w-4 h-4 text-foreground/40" /> : <ChevronDown className="w-4 h-4 text-foreground/40" />}
-                </div>
-              </button>
+                </div>              </button>
 
               {expandId === h.id && (
                 <div className="px-5 pb-5 border-t border-[var(--glass-border)] pt-4 space-y-4">
@@ -363,6 +401,49 @@ export default function RahazaShiftHandoverModule({ token }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Sign Off Modal */}
+      {signOffId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" data-testid="signoff-modal">
+          <div className="bg-[var(--card-surface)] border border-[var(--glass-border)] rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground">Sign Off Handover</h3>
+                <p className="text-xs text-foreground/50 mt-0.5">Konfirmasi penerimaan laporan shift</p>
+              </div>
+              <button onClick={() => setSignOffId(null)} className="p-1 rounded text-foreground/40 hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground/60 mb-1">Catatan Sign Off (opsional)</label>
+              <textarea
+                value={signOffNotes}
+                onChange={e => setSignOffNotes(e.target.value)}
+                rows={3}
+                placeholder="Catatan serah terima, konfirmasi tugas diterima..."
+                className="w-full px-3 py-2 rounded-lg border border-[var(--glass-border)] bg-[var(--input-surface)] text-sm text-foreground resize-none"
+                data-testid="signoff-notes"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSignOff}
+                disabled={signOffSaving}
+                className="flex-1 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-sm font-medium hover:bg-emerald-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
+                data-testid="signoff-confirm-btn"
+              >
+                <BadgeCheck className="w-4 h-4" />
+                {signOffSaving ? 'Menyimpan...' : 'Konfirmasi Sign Off'}
+              </button>
+              <button onClick={() => setSignOffId(null)}
+                className="px-4 py-2 rounded-xl border border-[var(--glass-border)] text-sm text-foreground/60 hover:bg-[var(--glass-bg-hover)]">
+                Batal
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
