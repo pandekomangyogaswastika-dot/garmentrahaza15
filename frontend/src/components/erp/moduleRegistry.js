@@ -134,6 +134,8 @@ const RahazaMaterialReservationModule = lazy(() => import('./RahazaMaterialReser
 const RahazaProductionCalendarModule  = lazy(() => import('./RahazaProductionCalendarModule'));
 // Phase 23 — OEE Dashboard
 const RahazaOEEModule = lazy(() => import('./RahazaOEEModule'));
+// User Guide
+const RahazaUserGuideModule = lazy(() => import('./RahazaUserGuideModule'));
 
 // Module map — id → component. IDs MUST be unique.
 export const MODULE_REGISTRY = {
@@ -304,6 +306,8 @@ export const MODULE_REGISTRY = {
   'wh-material-reservation':   RahazaMaterialReservationModule,
   // Phase 23 — OEE Dashboard
   'prod-oee':                  RahazaOEEModule,
+  // User Guide
+  'user-guide':                RahazaUserGuideModule,
 };
 
 export const DEFAULT_MODULE = ManagementDashboard;

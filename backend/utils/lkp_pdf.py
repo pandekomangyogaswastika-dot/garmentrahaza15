@@ -563,28 +563,62 @@ def _build_section_k(content, styles):
     ]
 
 
+def _build_section_l_production_photos(content, styles, production_image_files=None):
+    """L. Foto Produksi & QC — foto yang diupload ke LKP (QC check, defect evidence, progress)."""
+    photos = production_image_files or []
+    if not photos:
+        return []  # Jika tidak ada foto, section ini tidak muncul di PDF
+
+    cells = []
+    captions = content.get("production_photo_captions") or []
+
+    for idx, img_buf in enumerate(photos[:6]):  # max 6 foto per halaman (3x2)
+        try:
+            img = RLImage(img_buf, width=55 * mm, height=45 * mm, kind="proportional")
+            caption_txt = captions[idx] if idx < len(captions) else f"Foto {idx + 1}"
+            cell_content = [img, Paragraph(_safe(caption_txt), styles["body_small"])]
+            cells.append(cell_content)
+        except Exception:
+            pass
+
+    if not cells:
+        return []
+
+    # Arrange in 3-column grid
+    rows = []
+    for i in range(0, len(cells), 3):
+        row = cells[i:i + 3]
+        while len(row) < 3:
+            row.append([""])
+        rows.append(row)
+
+    photo_table = Table(
+        rows,
+        colWidths=[60 * mm] * 3,
+        style=TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.3, BORDER),
+            ("INNERGRID", (0, 0), (-1, -1), 0.3, BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ])
+    )
+    return [
+        _section_header("L. FOTO PRODUKSI & QC", styles),
+        Spacer(1, 3 * mm),
+        photo_table,
+        Spacer(1, 4 * mm),
+    ]
+
+
 # ─── Main entry point ───────────────────────────────────────────────────
-def build_lkp_pdf(content: dict, image_files=None) -> bytes:
+def build_lkp_pdf(content: dict, image_files=None, production_image_files=None) -> bytes:
     """
     Build LKP PDF from content dict. Returns bytes.
 
-    `content` structure:
-      {
-        "lkp_number", "version", "status_label", "print_date", "printed_by",
-        "qr_data" (optional),
-        "company_name", "company_addr",
-        "work_order": {wo_number, qty, size_code, target_start_date, target_end_date, priority},
-        "order": {order_number, customer_name, order_date},
-        "model": {code, name, category},
-        "tech_pack": {color, color_code, gauge, weight_per_pcs, knit_structure, measurements:[{part,value}]},
-        "bom_snapshot": {yarn_materials:[...], accessory_materials:[...]},
-        "assignment": {line_name, machine_name, machine_gauge, operator_name, shift_name, start_date, end_date, daily_target, shift_target},
-        "process_flow": [{name, duration_estimate, sam, line}],
-        "sop_steps": [{process_name, tools, safety, steps, acceptance_criteria, common_defects}],
-        "qc": {aql_level, sampling_rule, dimensional_tolerance, defect_codes_to_watch:[...], checkpoints:[...]},
-        "packing": {instruction, fold_method, polybag_spec, hangtag_placement, qty_per_carton, carton_spec, shipping_mark},
-        "special_notes",
-      }
+    `content` structure: (same as before, plus:)
+      "production_photo_captions": ["QC Check 1", "Defect Detail", ...] — optional captions
     """
     buf = io.BytesIO()
     styles = _styles()
@@ -646,6 +680,7 @@ def build_lkp_pdf(content: dict, image_files=None) -> bytes:
     story.extend(_build_section_i(content, styles))
     story.extend(_build_section_j(styles))
     story.extend(_build_section_k(content, styles))
+    story.extend(_build_section_l_production_photos(content, styles, production_image_files))
 
     doc.build(story)
     pdf_bytes = buf.getvalue()

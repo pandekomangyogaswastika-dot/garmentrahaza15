@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye, RefreshCw, Calendar, BadgeCheck, X } from 'lucide-react';
+import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye, RefreshCw, Calendar, BadgeCheck, X, Download, Upload, Image, Trash2 } from 'lucide-react';
 
 const STATUS_LABEL = { present: 'Hadir', absent: 'Alpha', late: 'Terlambat' };
 const STATUS_COLOR = { present: 'text-emerald-400', absent: 'text-red-400', late: 'text-amber-400' };
@@ -344,6 +344,16 @@ export default function RahazaShiftHandoverModule({ token }) {
 
               {expandId === h.id && (
                 <div className="px-5 pb-5 border-t border-[var(--glass-border)] pt-4 space-y-4">
+                  <div className="flex justify-end">
+                    <a
+                      href={`/api/rahaza/shift-handovers/${h.id}/pdf`}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 text-xs hover:bg-blue-500/10 transition-colors"
+                      data-testid={`download-pdf-${h.id}`}
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download PDF
+                    </a>
+                  </div>
                   {h.notes && (
                     <div>
                       <p className="text-xs font-semibold text-foreground/50 uppercase mb-1">Catatan Umum</p>

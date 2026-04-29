@@ -261,15 +261,58 @@ async def _build_content_snapshot(db, wo: dict, body: dict, user: dict) -> dict:
 
 
 async def _generate_pdf_bytes(db, content_with_meta: dict) -> bytes:
-    """Download model images then build PDF."""
+    """Download model images + production photos, then build PDF."""
+    import aiohttp
+
+    # ── Model design images (from storage) ──
     image_files = []
     for path in content_with_meta.get("model_image_paths") or []:
         try:
             data, _ = get_object(path)
             image_files.append(io.BytesIO(data))
         except Exception as e:
-            logger.warning(f"LKP image fetch failed ({path}): {e}")
-    return build_lkp_pdf(content_with_meta, image_files=image_files)
+            logger.warning(f"LKP model image fetch failed ({path}): {e}")
+
+    # ── Production/QC photos attached to this LKP ──
+    production_image_files = []
+    lkp_id = content_with_meta.get("lkp_id")
+    if lkp_id:
+        try:
+            prod_photos = await db.rahaza_lkp_photos.find(
+                {"lkp_id": lkp_id, "active": True},
+                {"_id": 0, "storage_path": 1, "url": 1, "caption": 1}
+            ).sort("created_at", 1).to_list(None)
+
+            captions = []
+            for ph in prod_photos:
+                img_buf = None
+                # Try storage path first
+                if ph.get("storage_path"):
+                    try:
+                        data, _ = get_object(ph["storage_path"])
+                        img_buf = io.BytesIO(data)
+                    except Exception as e:
+                        logger.warning(f"LKP prod photo storage fetch failed: {e}")
+                # Fallback: fetch from URL
+                if img_buf is None and ph.get("url"):
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(ph["url"], timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                                if resp.status == 200:
+                                    data = await resp.read()
+                                    img_buf = io.BytesIO(data)
+                    except Exception as e:
+                        logger.warning(f"LKP prod photo URL fetch failed: {e}")
+                if img_buf:
+                    production_image_files.append(img_buf)
+                    captions.append(ph.get("caption") or f"Foto {len(captions) + 1}")
+
+            if captions:
+                content_with_meta["production_photo_captions"] = captions
+        except Exception as e:
+            logger.warning(f"LKP production photos fetch failed: {e}")
+
+    return build_lkp_pdf(content_with_meta, image_files=image_files, production_image_files=production_image_files)
 
 
 # ─── ENDPOINTS ─────────────────────────────────────────────────────────
@@ -415,10 +458,22 @@ async def download_lkp_pdf(lkp_id: str, request: Request, auth: Optional[str] = 
             logger.warning(f"LKP cached PDF fetch failed, regenerating: {e}")
 
     if not pdf_bytes:
-        # Regenerate from snapshot
+        # Regenerate from snapshot — always fetch fresh model images + production photos
         content = doc.get("content_snapshot") or {}
+        # Re-fetch latest model images in case updated
+        if content.get("model_id_ref") or content.get("model"):
+            model_id = content.get("model_id_ref")
+            model_doc = None
+            if model_id:
+                model_doc = await db.rahaza_models.find_one({"id": model_id}, {"_id": 0})
+            if not model_doc and content.get("model"):
+                model_doc = await db.rahaza_models.find_one({"code": content["model"].get("code")}, {"_id": 0})
+            if model_doc:
+                content["model_image_paths"] = list(model_doc.get("image_paths") or [])
+
         pdf_meta = {
             **content,
+            "lkp_id": lkp_id,  # needed to fetch production photos
             "lkp_number": doc.get("lkp_number", "-"),
             "version": doc.get("version", 1),
             "status_label": (doc.get("status") or "released").upper(),
@@ -643,3 +698,119 @@ async def delete_lkp(lkp_id: str, request: Request):
         {"$set": {"status": "revoked", "updated_at": _now()}, "$push": {"audit_log": audit_entry}}
     )
     return {"ok": True}
+
+
+# ─────────────────────────────────────────────────────────────────────
+#  LKP PRODUCTION PHOTOS
+# ─────────────────────────────────────────────────────────────────────
+
+@router.post("/lkp/{lkp_id}/photos")
+async def upload_lkp_photo(lkp_id: str, request: Request):
+    """
+    Upload foto produksi/QC ke LKP.
+    Accepts multipart/form-data:
+      - file   : image file (JPEG/PNG/WEBP)
+      - caption: string (opsional, maks 120 chars)
+      - type   : qc_check | defect_evidence | production_progress | packaging | other
+
+    Foto akan otomatis muncul di PDF LKP saat di-download/regenerate.
+    """
+    from fastapi import UploadFile, Form
+    user = await require_auth(request)
+    if not check_role(user, _LKP_WRITE_ROLES, _LKP_WRITE_PERM):
+        raise HTTPException(403, "Tidak ada akses upload foto LKP")
+    db = get_db()
+
+    doc = await db.rahaza_lkp.find_one({"id": lkp_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "LKP tidak ditemukan")
+
+    # Parse multipart
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" not in content_type:
+        raise HTTPException(415, "Gunakan multipart/form-data")
+
+    form = await request.form()
+    file_obj = form.get("file")
+    caption = str(form.get("caption") or "")[:120]
+    photo_type = str(form.get("type") or "qc_check")
+
+    if not file_obj:
+        raise HTTPException(400, "Field 'file' wajib ada")
+
+    file_bytes = await file_obj.read()
+    if len(file_bytes) > 10 * 1024 * 1024:  # 10MB max
+        raise HTTPException(413, "Ukuran file maksimal 10MB")
+
+    content_type_file = getattr(file_obj, "content_type", "image/jpeg")
+    if content_type_file not in ("image/jpeg", "image/jpg", "image/png", "image/webp"):
+        raise HTTPException(415, "Format file harus JPEG, PNG, atau WEBP")
+
+    # Store to object storage
+    photo_id = _uid()
+    storage_path = None
+    try:
+        path = generate_storage_path(user["id"], f"lkp-photo-{photo_id}.jpg")
+        result = put_object(path, file_bytes, content_type_file)
+        storage_path = result.get("path", path)
+    except Exception as e:
+        logger.warning(f"LKP photo storage failed: {e}")
+        # Store as base64 fallback
+        import base64
+        storage_path = None
+
+    photo_doc = {
+        "id": photo_id,
+        "lkp_id": lkp_id,
+        "storage_path": storage_path,
+        "caption": caption,
+        "type": photo_type,
+        "filename": getattr(file_obj, "filename", f"photo_{photo_id}.jpg"),
+        "size": len(file_bytes),
+        "active": True,
+        "uploaded_by": user.get("id"),
+        "uploaded_by_name": user.get("name", "-"),
+        "created_at": _now().isoformat(),
+    }
+    await db.rahaza_lkp_photos.insert_one(photo_doc)
+    photo_doc.pop("_id", None)
+
+    # Mark LKP PDF as stale (needs regeneration)
+    await db.rahaza_lkp.update_one(
+        {"id": lkp_id},
+        {"$set": {"pdf_stale": True, "photo_count": await db.rahaza_lkp_photos.count_documents({"lkp_id": lkp_id, "active": True}), "updated_at": _now()},
+         "$push": {"audit_log": {"action": "photo_uploaded", "photo_id": photo_id, "caption": caption, "user_id": user["id"], "timestamp": _now()}}}
+    )
+
+    logger.info(f"LKP {lkp_id} photo {photo_id} uploaded by {user.get('name')}")
+    return photo_doc
+
+
+@router.get("/lkp/{lkp_id}/photos")
+async def list_lkp_photos(lkp_id: str, request: Request):
+    """List semua foto yang di-attach ke LKP."""
+    await require_auth(request)
+    db = get_db()
+    photos = await db.rahaza_lkp_photos.find(
+        {"lkp_id": lkp_id, "active": True},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(None)
+    return photos
+
+
+@router.delete("/lkp/{lkp_id}/photos/{photo_id}")
+async def delete_lkp_photo(lkp_id: str, photo_id: str, request: Request):
+    """Hapus foto dari LKP."""
+    user = await require_auth(request)
+    if not check_role(user, _LKP_WRITE_ROLES, _LKP_WRITE_PERM):
+        raise HTTPException(403, "Tidak ada akses hapus foto LKP")
+    db = get_db()
+    photo = await db.rahaza_lkp_photos.find_one({"id": photo_id, "lkp_id": lkp_id})
+    if not photo:
+        raise HTTPException(404, "Foto tidak ditemukan")
+    await db.rahaza_lkp_photos.update_one({"id": photo_id}, {"$set": {"active": False}})
+    await db.rahaza_lkp.update_one(
+        {"id": lkp_id},
+        {"$set": {"pdf_stale": True, "updated_at": _now()}}
+    )
+    return {"ok": True, "photo_id": photo_id}

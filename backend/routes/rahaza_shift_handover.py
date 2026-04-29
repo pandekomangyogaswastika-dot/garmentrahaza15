@@ -23,6 +23,7 @@ Purpose:
   - Historical record of shift-to-shift communication
 """
 from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi.responses import Response
 from database import get_db
 from auth import require_auth, serialize_doc
 from datetime import datetime, timezone, date, timedelta
@@ -425,3 +426,62 @@ async def seed_default_handover_template(request: Request):
     template.pop("_id", None)
     
     return {"ok": True, "template": template}
+
+
+
+# ─── END-OF-SHIFT PDF ───────────────────────────────────────────────────────
+
+@router.get("/shift-handovers/{handover_id}/pdf")
+async def download_shift_report_pdf(handover_id: str, request: Request):
+    """
+    Download End-of-Shift Report PDF for a handover.
+    Generates a clean PDF with shift info, checklist, issues, pending tasks,
+    WO progress (filtered by the line in handover), and signature block.
+    """
+    user = await require_auth(request)
+    db = get_db()
+
+    handover = await db.rahaza_shift_handovers.find_one({"id": handover_id}, {"_id": 0})
+    if not handover:
+        raise HTTPException(404, "Shift handover tidak ditemukan")
+
+    # Enrich shift name
+    if handover.get("shift_id") and not handover.get("shift_name"):
+        shift = await db.rahaza_shifts.find_one({"id": handover["shift_id"]}, {"_id": 0})
+        if shift:
+            handover["shift_name"] = shift.get("name", shift.get("code", ""))
+
+    # Fetch WO summary for the line(s) mentioned in this handover
+    wo_summary = []
+    line_id = handover.get("line_id")
+    line_code = handover.get("line_code")
+    query = {}
+    if line_id:
+        query["line_id"] = line_id
+    elif line_code:
+        query["line_code"] = line_code
+    else:
+        # Fetch WOs from today regardless of line (limit 10)
+        query["start_date"] = {"$lte": handover.get("date", date.today().isoformat())}
+
+    wos = await db.rahaza_work_orders.find(
+        {**query, "status": {"$in": ["released", "in_progress", "completed"]}},
+        {"_id": 0, "wo_number": 1, "model_code": 1, "qty": 1,
+         "qty_produced": 1, "qty_passed_qc": 1, "status": 1}
+    ).limit(15).to_list(None)
+    wo_summary = list(wos)
+
+    try:
+        from utils.shift_report_pdf import build_shift_report_pdf
+        pdf_bytes = build_shift_report_pdf(handover, wo_summary=wo_summary)
+    except Exception as e:
+        logger.error(f"Shift PDF generation failed: {e}", exc_info=True)
+        raise HTTPException(500, f"Gagal generate PDF: {e}")
+
+    filename = f"Laporan-Shift_{handover.get('date','')}_v{handover.get('version',1)}.pdf"
+    logger.info(f"Shift PDF generated for {handover_id} by {user.get('name')}")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
