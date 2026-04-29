@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, Area, AreaChart } from 'recharts';
 import { Package, Factory, FileText, DollarSign, AlertTriangle, TrendingUp, TrendingDown, Clock, Bell, ChevronDown, ChevronUp, X, Send, MessageSquare, ExternalLink, Calendar, Filter, RefreshCw, CheckCircle, XCircle, Truck, RotateCcw, Shield, Zap, Target, BarChart3 } from 'lucide-react';
 import { GlassCard, GlassPanel, GlassInput } from '@/components/ui/glass';
+import { IconButton } from './IconButton';
 
 const COLORS = ['#2dd4bf', '#38bdf8', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
 const fmt = (v) => 'Rp ' + (v || 0).toLocaleString('id-ID');
@@ -47,7 +48,7 @@ function DrilldownModal({ title, children, onClose, onNavigate, navLabel }) {
                 <ExternalLink className="w-3 h-3" /> {navLabel}
               </button>
             )}
-            <button onClick={onClose} className="p-1.5 hover:bg-[var(--glass-bg-hover)] rounded-lg"><X className="w-5 h-5 text-muted-foreground" /></button>
+            <IconButton label="Tutup detail" onClick={onClose} className="p-1.5 hover:bg-[var(--glass-bg-hover)] rounded-lg" data-testid="drilldown-close"><X className="w-5 h-5 text-muted-foreground" /></IconButton>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
@@ -171,9 +172,9 @@ export default function Dashboard({ token, onNavigate }) {
           <button onClick={() => setShowReminder(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-xs font-medium text-primary hover:bg-primary/15 transition-colors" data-testid="send-reminder-btn">
             <Bell className="w-3.5 h-3.5" /> Kirim Reminder
           </button>
-          <button onClick={() => { fetchMetrics(); fetchAnalytics(); }} className="p-1.5 hover:bg-[var(--glass-bg-hover)] rounded-lg transition-colors" title="Refresh">
+          <IconButton label="Refresh dashboard" onClick={() => { fetchMetrics(); fetchAnalytics(); }} className="p-1.5 hover:bg-[var(--glass-bg-hover)] rounded-lg transition-colors" data-testid="dashboard-refresh">
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          </IconButton>
         </div>
       </div>
 

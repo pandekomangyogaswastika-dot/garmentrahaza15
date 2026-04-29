@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { GlassCard, GlassInput } from '@/components/ui/glass';
 import { Button } from '@/components/ui/button';
 import { MapPin, ArrowRight, Boxes, Search, RefreshCw, Check } from 'lucide-react';
+import { IconButton } from './IconButton';
 
 const fmtNum = (v) => (v || 0).toLocaleString('id-ID');
 
@@ -54,7 +55,7 @@ export default function PutAwayModule({ token }) {
     <div className="space-y-6" data-testid="wh-putaway-module">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-foreground">Put-Away</h1><p className="text-muted-foreground text-sm">Alokasi barang ke lokasi penyimpanan</p></div>
-        <button onClick={fetchData} className="p-2 rounded-xl hover:bg-[var(--glass-bg-hover)] transition-colors"><RefreshCw className="w-4 h-4 text-muted-foreground" /></button>
+        <IconButton label="Refresh data" onClick={fetchData} data-testid="putaway-refresh"><RefreshCw className="w-4 h-4 text-muted-foreground" /></IconButton>
       </div>
 
       {message && (

@@ -163,6 +163,7 @@ const PORTAL_NAV = {
       {
         label: 'QUALITY & ANALYTICS',
         items: [
+          { id: 'prod-aql-calculator', label: 'AQL Sampling Tool',     icon: Shield },
           { id: 'prod-pareto',   label: 'Pareto Cacat',          icon: BarChart3 },
           { id: 'prod-fpy',      label: 'First Pass Yield (FPY)', icon: Target },
           { id: 'prod-downtime', label: 'Log Downtime Mesin',     icon: AlertTriangle },

@@ -5,6 +5,7 @@ import {
   Warehouse, Boxes, ArrowDownToLine, TrendingUp, Package,
   MapPin, Activity, RefreshCw, Clock
 } from 'lucide-react';
+import { IconButton } from './IconButton';
 
 const fmtNum = (v) => (v || 0).toLocaleString('id-ID');
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -54,9 +55,9 @@ export default function WarehouseDashboard({ token }) {
           <h1 className="text-2xl font-bold text-foreground">Dashboard Gudang</h1>
           <p className="text-muted-foreground text-sm mt-1">Ringkasan stok, penerimaan, dan pergerakan barang</p>
         </div>
-        <button onClick={fetchDashboard} className="p-2 rounded-xl hover:bg-[var(--glass-bg-hover)] transition-colors" title="Muat Ulang">
+        <IconButton label="Muat ulang dashboard" onClick={fetchDashboard} data-testid="wh-dashboard-refresh">
           <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        </IconButton>
       </div>
 
       {/* KPI Grid */}

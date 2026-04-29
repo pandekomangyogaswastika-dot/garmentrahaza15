@@ -136,6 +136,8 @@ const RahazaProductionCalendarModule  = lazy(() => import('./RahazaProductionCal
 const RahazaOEEModule = lazy(() => import('./RahazaOEEModule'));
 // User Guide
 const RahazaUserGuideModule = lazy(() => import('./RahazaUserGuideModule'));
+// Sprint 27 — AQL Sampling Calculator
+const RahazaAQLCalculatorModule = lazy(() => import('./RahazaAQLCalculatorModule'));
 
 // Module map — id → component. IDs MUST be unique.
 export const MODULE_REGISTRY = {
@@ -306,6 +308,8 @@ export const MODULE_REGISTRY = {
   'wh-material-reservation':   RahazaMaterialReservationModule,
   // Phase 23 — OEE Dashboard
   'prod-oee':                  RahazaOEEModule,
+  // Sprint 27 — AQL Sampling Calculator
+  'prod-aql-calculator':       RahazaAQLCalculatorModule,
 };
 
 export const DEFAULT_MODULE = ManagementDashboard;

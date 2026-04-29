@@ -8,6 +8,7 @@ import ShopFloorTV from './components/erp/ShopFloorTV';
 import { MODULE_REGISTRY, DEFAULT_MODULE } from './components/erp/moduleRegistry';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { Toaster } from './components/ui/sonner';
+import { TooltipProvider } from './components/ui/tooltip';
 import AIChatbotWidget from './components/erp/AIChatbotWidget';
 
 // Default module untuk tiap portal
@@ -203,11 +204,13 @@ function App() {
 export default function AppWithTheme() {
   return (
     <ThemeProvider defaultTheme="system">
-      {/* Ambient decorative layers — pointer-events none, behind everything */}
-      <div className="starfield" aria-hidden="true" />
-      <div className="noise-overlay fixed inset-0 pointer-events-none" aria-hidden="true" />
-      <App />
-      <Toaster position="top-right" richColors closeButton />
+      <TooltipProvider delayDuration={250}>
+        {/* Ambient decorative layers — pointer-events none, behind everything */}
+        <div className="starfield" aria-hidden="true" />
+        <div className="noise-overlay fixed inset-0 pointer-events-none" aria-hidden="true" />
+        <App />
+        <Toaster position="top-right" richColors closeButton />
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Trash2, BookCheck, FileText, X, Check, Ban, Search } f
 import { GlassCard, GlassInput } from '@/components/ui/glass';
 import { Button } from '@/components/ui/button';
 import { PageHeader, StatTile } from './moduleAtoms';
+import { IconButton } from './IconButton';
 
 const fmt = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -58,7 +59,7 @@ function JournalEditor({ accounts, onSave, onClose }) {
     <GlassCard className="p-5" data-testid="je-editor">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-foreground">Jurnal Baru</h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground" data-testid="je-editor-close"><X className="w-4 h-4" /></button>
+        <IconButton label="Tutup editor" onClick={onClose} className="text-muted-foreground hover:text-foreground p-1" data-testid="je-editor-close"><X className="w-4 h-4" /></IconButton>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <div>
@@ -135,7 +136,7 @@ function JournalDetail({ je, onPost, onVoid, onDelete, onClose }) {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={je.status} />
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground" data-testid="je-detail-close"><X className="w-4 h-4" /></button>
+          <IconButton label="Tutup detail jurnal" onClick={onClose} className="text-muted-foreground hover:text-foreground p-1" data-testid="je-detail-close"><X className="w-4 h-4" /></IconButton>
         </div>
       </div>
       <table className="w-full text-sm">

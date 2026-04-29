@@ -5,6 +5,7 @@ import {
   Clock, UserCheck, UserX, Coffee, Plane, Sun, HelpCircle, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { IconButton } from './IconButton';
 
 const fmtCurrency = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
@@ -103,9 +104,9 @@ export default function HRDashboard({ token }) {
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <button onClick={fetchDashboard} className="p-2 rounded-xl hover:bg-[var(--glass-bg-hover)] transition-colors" title="Refresh">
+        <IconButton label="Refresh dashboard" onClick={fetchDashboard} data-testid="hr-dashboard-refresh">
           <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        </IconButton>
       </div>
 
       {/* KPI Row */}

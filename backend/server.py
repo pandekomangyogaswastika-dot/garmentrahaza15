@@ -551,6 +551,10 @@ app.include_router(rahaza_production_calendar_router)
 from routes.rahaza_demo_seed import router as rahaza_demo_seed_router
 app.include_router(rahaza_demo_seed_router)
 
+# Sprint 27 — AQL Sampling Calculator
+from routes.rahaza_aql import router as rahaza_aql_router
+app.include_router(rahaza_aql_router)
+
 # ─── CORS MIDDLEWARE ────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,

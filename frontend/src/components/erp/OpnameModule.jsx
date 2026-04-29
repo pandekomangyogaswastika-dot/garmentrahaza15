@@ -3,6 +3,7 @@ import { GlassCard, GlassInput } from '@/components/ui/glass';
 import Modal from '@/components/erp/Modal';
 import { Button } from '@/components/ui/button';
 import { ClipboardCheck, Plus, Search, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { IconButton } from './IconButton';
 
 const fmtNum = (v) => (v || 0).toLocaleString('id-ID');
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
@@ -88,7 +89,7 @@ export default function OpnameModule({ token }) {
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-foreground">Stock Opname</h1><p className="text-muted-foreground text-sm">Cycle count, selisih, dan adjustment stok</p></div>
         <div className="flex gap-2">
-          <button onClick={fetchData} className="p-2 rounded-xl hover:bg-[var(--glass-bg-hover)] transition-colors"><RefreshCw className="w-4 h-4 text-muted-foreground" /></button>
+          <IconButton label="Refresh data" onClick={fetchData} data-testid="opname-refresh"><RefreshCw className="w-4 h-4 text-muted-foreground" /></IconButton>
           <Button onClick={() => setShowCreate(true)} className="bg-primary text-primary-foreground hover:brightness-110 gap-1.5" data-testid="create-opname-btn"><Plus className="w-4 h-4" /> New Opname</Button>
         </div>
       </div>

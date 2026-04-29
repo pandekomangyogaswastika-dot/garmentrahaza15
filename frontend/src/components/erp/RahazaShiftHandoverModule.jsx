@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, ClipboardCheck, Clock, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Eye, RefreshCw, Calendar, BadgeCheck, X, Download, Upload, Image, Trash2 } from 'lucide-react';
+import { Combobox } from './Combobox';
 
 const STATUS_LABEL = { present: 'Hadir', absent: 'Alpha', late: 'Terlambat' };
 const STATUS_COLOR = { present: 'text-emerald-400', absent: 'text-red-400', late: 'text-amber-400' };
@@ -168,11 +169,19 @@ export default function RahazaShiftHandoverModule({ token }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-foreground/60 mb-1">Shift</label>
-              <select value={form.shift_id} onChange={e => setForm(f => ({ ...f, shift_id: e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--glass-border)] bg-[var(--input-surface)] text-sm text-foreground"
-                data-testid="handover-shift-select">
-                {shifts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.start_time}–{s.end_time})</option>)}
-              </select>
+              <Combobox
+                value={form.shift_id}
+                onChange={(v) => setForm(f => ({ ...f, shift_id: v }))}
+                options={shifts.map(s => ({
+                  value: s.id,
+                  label: s.name,
+                  description: `${s.start_time}–${s.end_time}`,
+                }))}
+                placeholder="Pilih shift..."
+                searchPlaceholder="Cari shift..."
+                emptyMessage="Shift tidak ditemukan"
+                data-testid="handover-shift-select"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground/60 mb-1">Tanggal</label>
@@ -231,25 +240,43 @@ export default function RahazaShiftHandoverModule({ token }) {
             </div>
             {form.issues.map((issue, idx) => (
               <div key={idx} className="flex gap-2 mb-2">
-                <select value={issue.type} onChange={e => {
-                  const u = [...form.issues]; u[idx].type = e.target.value; setForm(f => ({ ...f, issues: u }));
-                }} className="h-9 px-2 rounded-lg border border-[var(--glass-border)] bg-[var(--input-surface)] text-xs text-foreground w-28">
-                  <option value="mesin">Mesin</option>
-                  <option value="material">Material</option>
-                  <option value="karyawan">Karyawan</option>
-                  <option value="kualitas">Kualitas</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
+              <div className="w-32">
+                <Combobox
+                  value={issue.type}
+                  onChange={(v) => {
+                    const u = [...form.issues]; u[idx].type = v; setForm(f => ({ ...f, issues: u }));
+                  }}
+                  options={[
+                    { value: 'mesin', label: 'Mesin' },
+                    { value: 'material', label: 'Material' },
+                    { value: 'karyawan', label: 'Karyawan' },
+                    { value: 'kualitas', label: 'Kualitas' },
+                    { value: 'lainnya', label: 'Lainnya' },
+                  ]}
+                  placeholder="Tipe..."
+                  size="sm"
+                  data-testid={`issue-type-${idx}`}
+                />
+              </div>
                 <input value={issue.description} onChange={e => {
                   const u = [...form.issues]; u[idx].description = e.target.value; setForm(f => ({ ...f, issues: u }));
                 }} placeholder="Deskripsi masalah" className="flex-1 h-9 px-3 rounded-lg border border-[var(--glass-border)] bg-[var(--input-surface)] text-sm text-foreground" />
-                <select value={issue.priority} onChange={e => {
-                  const u = [...form.issues]; u[idx].priority = e.target.value; setForm(f => ({ ...f, issues: u }));
-                }} className="h-9 px-2 rounded-lg border border-[var(--glass-border)] bg-[var(--input-surface)] text-xs text-foreground w-24">
-                  <option value="low">Rendah</option>
-                  <option value="medium">Sedang</option>
-                  <option value="high">Tinggi</option>
-                </select>
+              <div className="w-28">
+                <Combobox
+                  value={issue.priority}
+                  onChange={(v) => {
+                    const u = [...form.issues]; u[idx].priority = v; setForm(f => ({ ...f, issues: u }));
+                  }}
+                  options={[
+                    { value: 'low', label: 'Rendah' },
+                    { value: 'medium', label: 'Sedang' },
+                    { value: 'high', label: 'Tinggi' },
+                  ]}
+                  placeholder="Prioritas..."
+                  size="sm"
+                  data-testid={`issue-priority-${idx}`}
+                />
+              </div>
                 <button onClick={() => setForm(f => ({ ...f, issues: f.issues.filter((_, i) => i !== idx) }))}
                   className="h-9 w-9 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-lg flex items-center justify-center">×</button>
               </div>

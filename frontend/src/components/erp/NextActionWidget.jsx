@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { GlassCard, GlassPanel } from '@/components/ui/glass';
 import { Button } from '@/components/ui/button';
+import { IconButton } from './IconButton';
 
 /* ─── PT Rahaza ERP · NextActionWidget (Phase 16.2) ───────────────────────────
    Menampilkan kartu "apa yang harus dikerjakan selanjutnya" berdasarkan
@@ -167,14 +168,14 @@ export function NextActionWidget({
             <div className="text-sm font-semibold text-foreground">Semua terkendali</div>
             <div className="text-xs text-muted-foreground">Tidak ada tindakan mendesak. Terus pantau line board dan dashboard.</div>
           </div>
-          <button
+          <IconButton
+            label="Muat ulang tindakan"
             onClick={fetchActions}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-            title="Muat ulang"
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 p-1 rounded"
             data-testid="next-action-refresh-empty"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          </IconButton>
         </div>
       </GlassPanel>
     );
@@ -199,15 +200,15 @@ export function NextActionWidget({
           {lastUpdated && (
             <span className="text-[10px] text-muted-foreground">{lastUpdated}</span>
           )}
-          <button
+          <IconButton
+            label="Muat ulang tindakan"
             onClick={fetchActions}
             disabled={loading}
             className="p-1 rounded hover:bg-[var(--glass-bg-hover)] text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="Muat ulang"
             data-testid="next-action-refresh"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          </IconButton>
         </div>
       </div>
 
@@ -257,14 +258,15 @@ export function NextActionWidget({
                         <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{a.description}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleSnooze(a.id)}
-                      className="p-1 rounded hover:bg-[var(--glass-bg-hover)] text-muted-foreground/60 hover:text-muted-foreground flex-shrink-0"
-                      title="Sembunyikan 4 jam"
-                      data-testid={`nae-snooze-${a.id}`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+          <button
+            onClick={() => handleSnooze(a.id)}
+            className="p-1 rounded hover:bg-[var(--glass-bg-hover)] text-muted-foreground/60 hover:text-muted-foreground flex-shrink-0"
+            title="Sembunyikan 4 jam"
+            aria-label="Sembunyikan 4 jam"
+            data-testid={`nae-snooze-${a.id}`}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
                   </div>
 
                   {/* Why expandable */}

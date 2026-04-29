@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, X, Send, Bot, User, Loader2, RefreshCw, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IconButton } from './IconButton';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -86,8 +87,8 @@ export default function AIChatbotWidget({ headers, user }) {
                 <span className="font-semibold text-primary-foreground text-sm">Asisten ERP Rahaza</span>
               </div>
               <div className="flex gap-1">
-                <button onClick={clearChat} className="text-primary-foreground/70 hover:text-primary-foreground p-1"><RefreshCw className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground p-1"><ChevronDown className="w-4 h-4" /></button>
+                <IconButton label="Hapus riwayat chat" onClick={clearChat} className="text-primary-foreground/70 hover:text-primary-foreground p-1" data-testid="ai-chat-clear"><RefreshCw className="w-3.5 h-3.5" /></IconButton>
+                <IconButton label="Tutup chat" onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground p-1" data-testid="ai-chat-close"><ChevronDown className="w-4 h-4" /></IconButton>
               </div>
             </div>
 
